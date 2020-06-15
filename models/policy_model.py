@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, backref
 
 
 class remotedata(db.Model):
-    _tablename__ = 'remotedata'
+    __tablename__ = 'remotedata'
     guid = db.Column(db.String, primary_key=True)
     appkey = db.Column(db.String(50), nullable=False)
     custId = db.Column(db.String(50))

@@ -3,8 +3,8 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
 
 
-class GJXXPT_Product(db.Model):
-    _tablename__ = 'GJXXPT_Product'
+class GJXXPTProduct(db.Model):
+    __tablename__ = 'GJXXPT_Product'
     GUID = db.Column(db.String, primary_key=True)
     appkey = db.Column(db.String(50), nullable=False)
     InsuranceCoverageCode = db.Column(db.String(50))
@@ -21,7 +21,7 @@ class GJXXPT_Product(db.Model):
     InsurerCode = db.Column(db.String(50))
     SendMode = db.Column(db.String(50))
     Rate2 = db.Column(db.String(50))
-    PolicyAmount = db.Column(db.Decimal(18,2))
+    PolicyAmount = db.Column(db.Numeric(18,2))
     BXcargoCode = db.Column(db.String(50))
     BXcargoName = db.Column(db.String(50))
     CustCode = db.Column(db.String(50))
