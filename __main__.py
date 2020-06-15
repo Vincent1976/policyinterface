@@ -14,6 +14,8 @@ import traceback
 import suds
 from suds.client import Client
 import hashlib
+from models import GJXXPT_Product_model
+from models import RBProductInfo_model
 
 
 # 创建flask对象
@@ -242,24 +244,25 @@ def getpolicy(appkey, billno):
 # 洪仟测试
 @app.route('/postInsurer_HT/<guid>/<appkey>', methods=['GET'])
 def getpolicyTest(guid, appkey):
-    print(guid)
+    return postInsurer_HT(guid, appkey)
 
 # 投递保险公司(华泰)
 def postInsurer_HT(guid,appkey):
     try:
-        # #region 读取等待投保数据
-        # remotedata = policy_model.remotedata.query.filter(policy_model.remotedata.guid==guid).all()
-        # issueTime=d_now_yyyy_mm_dd_HH_MM_SS(datetime.datetime.now()).replace(" ", "T") #出单时间
-        # insurancePolicy = "" #保单号
-        # serialNumber=guid.replace("-","") #流水号
-        # #产品校验
-        # GJXXPT_Product=GJXXPT_Product_model.GJXXPT_Product.query.filter(GJXXPT_Product_model.GJXXPT_Product.appkey==appkey).all()
-        # if GJXXPT_Product==null
-        #     raise Exception('产品配置信息不存在，投保失败')
-        # RBProductInfo=RBProductInfo_model.RBProductInfo.query.filter(RBProductInfo_model.RBProductInfo.line_no==GJXXPT_Product['line_no']).all()
-        # if RBProductInfo==null
-        #     raise Exception('分产品配置信息不存在，投保失败')
-        # #endregion
+        #region 读取等待投保数据
+        remotedata = policy_model.remotedata.query.filter(policy_model.remotedata.guid==guid).all()
+        issueTime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "T") #出单时间
+        insurancePolicy = "" #保单号
+        serialNumber=guid.replace("-","") #流水号
+        #产品校验
+        GJXXPTProduct=GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey==appkey).all()
+        GJXXPTProduct = model_to_dict(GJXXPTProduct)
+        if len(GJXXPTProduct)==0 :
+            raise Exception('产品配置信息不存在，投保失败')
+        RBProductInfo=RBProductInfo_model.RBProductInfo.query.filter(RBProductInfo_model.RBProductInfo.line_no==GJXXPTProduct[0]['numCode']).all()
+        if len(RBProductInfo)==0 :
+            raise Exception('分产品配置信息不存在，投保失败')
+        #endregion
         # insuranceCode=rsRBProductInfo[0] #险种代码
         # insuranceName=rsRBProductInfo[1] #险种名称
         # effectivTime=d_now_yyyy_mm_dd(policyresult['departDateTime']) #保险起期
@@ -388,8 +391,8 @@ def postInsurer_HT(guid,appkey):
         m.update(b)
         SignMD5 = m.hexdigest()
 
-        result = client.service.IMPPolicy(postXML, Usr, Pwd, SignMD5.upper())
-        print(result)
+        # result = client.service.IMPPolicy(postXML, Usr, Pwd, SignMD5.upper())
+        # print(result)
         return 'success'
     except Exception as err:
         traceback.print_exc()
