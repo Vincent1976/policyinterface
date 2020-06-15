@@ -241,8 +241,8 @@ def getpolicy(appkey, billno):
 
 # 洪仟测试
 @app.route('/postInsurer_HT/<guid>/<appkey>', methods=['GET'])
-def getpolicy(guid, appkey):
-    postInsurer_HT(guid, appkey)
+def getpolicyTest(guid, appkey):
+    print(guid)
 
 # 投递保险公司(华泰)
 def postInsurer_HT(guid,appkey):
