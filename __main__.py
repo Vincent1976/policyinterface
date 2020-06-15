@@ -144,7 +144,7 @@ def sendpolicy():
             exMessage += "insuredatetime不能为空;"
         elif policymodel.departDateTime.len != 14:
            raise Exception("错误：起运日期InsureDateTime格式有误，正确格式：20170526153733;")
-        
+        elif 
 
         if policymodel.transitSpot == "" and policymodel.vehiclenumber =="":
             exMessage += "运单号或者车牌号至少一个必填;"
