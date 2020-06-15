@@ -14,6 +14,7 @@ import traceback
 import suds
 from suds.client import Client
 import hashlib
+import datetime
 
 
 # 创建flask对象
@@ -142,9 +143,17 @@ def sendpolicy():
             exMessage += "chargetypecode不能为空;"
         if policymodel.departDateTime == "":
             exMessage += "insuredatetime不能为空;"
-        elif policymodel.departDateTime.len != 14:
-           raise Exception("错误：起运日期InsureDateTime格式有误，正确格式：20170526153733;")
-        elif 
+        else:        
+            if policymodel.departDateTime.len != 14:
+                raise Exception("错误：起运日期InsureDateTime格式有误，正确格式：20170526153733;")
+            else:
+                departDateTimes = policymodel.insuredatetime 
+                policymodel.insuredatetime = departDateTimes.Substring(0, 4) + "-" + departDateTimes.Substring(4, 2) + "-" + departDateTimes.Substring(6, 2) + " "
+                + departDateTimes.Substring(8, 2) + ":" + departDateTimes.Substring(10, 2) + ":" + departDateTimes.Substring(12, 2)
+                # 倒签单校验
+                if datetime.datetime.Parse(policymodel.insuredatetime).AddHours(1).Subtract(datetime.datetime.Now()).TotalMinutes < 0:
+                    print()
+                    exMessage += "当前不允许倒签单;"
 
         if policymodel.transitSpot == "" and policymodel.vehiclenumber =="":
             exMessage += "运单号或者车牌号至少一个必填;"
@@ -160,12 +169,36 @@ def sendpolicy():
             exMessage += "cargotype不能为空;"
         if policymodel.cargoCount:
             exMessage += "packagequantity不能为空;"
+
+        # isSDS = true
+        # isDQM = false
+        # if departProvince != "" and destinationProvice != "":
+        #     return  
+        # #三段模式，需校验  
+        # elif departStation != "" and arriveStation != "":
+        # #地区码模式，需校验
+        #     isDQM = true
+        #     isSDS = false
+        # else:  
+        #     return     
+        # #既不是三段模式，也不是地区码模式，需报错
+        #     raise Exception("地址信息有误，请确认三段模式或地区码模式")
+
         if exMessage !="":
             raise Exception(exMessage)
         print(exMessage)
             
-
-    
+        # 单据唯一性
+        sql = "SELECT guid FROM RemoteData WHERE appkey='%s' AND shipId='%s'" %(postdata['action'], postdata['sequencecode'])
+        dataResult = query(sql)
+        if policymodel.appkey == "apply":
+            if dataResult.Rows.Count > 0:
+                raise Exception("sequencecode已存在重复,请不要重复投递")
+        if policymodel.appkey == "modify":
+            if dataResult.Rows.Count == 0:
+                raise Exception("未找到指定sequencecode对应的投保数据，无法执行modify")
+            newPolicyNo = dataResult.channelOrderId
+            guid = dataResult.guid
         # 投递保险公司 或 龙琨编号
         # 反馈客户
 
