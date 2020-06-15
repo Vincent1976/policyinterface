@@ -53,7 +53,7 @@ def update(sql, params=None):
 def index():
     return 'Welcome!'
 
-# 投保接口
+# 投保接口 
 @app.route('/sendpolicy', methods=['POST'])
 def sendpolicy():
     try:
