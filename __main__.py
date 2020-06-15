@@ -51,7 +51,7 @@ def update(sql, params=None):
     return result
 
 # 首页路由
-@app.route('/', methods=['POST'])
+@app.route('/', methods=['GET'])
 def index():
     return 'Welcome!'
 
