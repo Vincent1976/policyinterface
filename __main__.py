@@ -406,10 +406,51 @@ def getpolicy(appkey, billno):
         result = json.dumps(searchResult)
         return json.loads(result)
 
+# 洪仟测试
+@app.route('/postInsurer_HT/<guid>/<appkey>', methods=['GET'])
+def getpolicy(guid, appkey):
+    postInsurer_HT(guid, appkey)
 
 # 投递保险公司(华泰)
-def postInsurer_HT(guid):
+def postInsurer_HT(guid,appkey):
     try:
+        # #region 读取等待投保数据
+        # remotedata = policy_model.remotedata.query.filter(policy_model.remotedata.guid==guid).all()
+        # issueTime=d_now_yyyy_mm_dd_HH_MM_SS(datetime.datetime.now()).replace(" ", "T") #出单时间
+        # insurancePolicy = "" #保单号
+        # serialNumber=guid.replace("-","") #流水号
+        # #产品校验
+        # GJXXPT_Product=GJXXPT_Product_model.GJXXPT_Product.query.filter(GJXXPT_Product_model.GJXXPT_Product.appkey==appkey).all()
+        # if GJXXPT_Product==null
+        #     raise Exception('产品配置信息不存在，投保失败')
+        # RBProductInfo=RBProductInfo_model.RBProductInfo.query.filter(RBProductInfo_model.RBProductInfo.line_no==GJXXPT_Product['line_no']).all()
+        # if RBProductInfo==null
+        #     raise Exception('分产品配置信息不存在，投保失败')
+        # #endregion
+        # insuranceCode=rsRBProductInfo[0] #险种代码
+        # insuranceName=rsRBProductInfo[1] #险种名称
+        # effectivTime=d_now_yyyy_mm_dd(policyresult['departDateTime']) #保险起期
+        # terminalTime=(datetime.date(d_now_yyyy_mm_dd(policyresult['departDateTime']))+datetime.timedelta(days=2)).strftime("%Y-%m-%d") #保险止期
+        # copy="1" #份数
+        # signTM=datetime.datetime.now().strftime("%Y-%m-%d") #签单时间
+        # sign="无" #货物标记 (默认国内传递空或者无) 
+        # packAndQuantity=policyresult['packageType']+policyresult['cargoWeight']+"吨" #包装及数量
+        # fregihtItem=policyresult['cargoName'] #货物项目
+        # invoiceNumber="" #发票号
+        # billNumber="详见运单" #提单号
+        # freightType=rsGJXXPTProduct[1] #货物类型（编码）
+        # freightDetail=rsGJXXPTProduct[2] #二级货物类型明细（编码）
+        # invoiceMoney=policyresult['cargeValue'] #发票金额
+        # invoiceBonus="1" #加成 (国内默认1)
+        # amt=Decimal(invoiceMoney)*Decimal(invoiceBonus) #保险金额
+        # amtCurrency="01" #保险金额币种（编码）(国内默认人民币01)
+        # exchangeRate="1" #汇率 (国内默认1)
+
+        # #写入日志
+        # f1 = open('/tmp/POST_TO_HT/logs/'+d_now_yyyymmdd(datetime.datetime.now())+'sendpolicy.txt','a')
+        # f1.write(d_now_yyyy_mm_dd_HH_MM_SS(datetime.datetime.now()) + ", Request json：" + str(json.loads(postdata)))
+        # f1.close()
+
         url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl" #这里是你的webservice访问地址
         client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
         postXML = """<?xml version='1.0' encoding='utf-8'?>
