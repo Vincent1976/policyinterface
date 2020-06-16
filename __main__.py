@@ -17,6 +17,8 @@ import hashlib
 import datetime
 from models import GJXXPT_Product_model
 from models import RBProductInfo_model
+from models import districts_model
+
 
 
 # 创建flask对象
@@ -110,6 +112,7 @@ def sendpolicy():
 
         #必填项校验
         exMessage = ''
+        
         if policymodel.appkey == "":
             exMessage += "appkey不能为空;"
         if policymodel.bizContent == "":
@@ -120,7 +123,6 @@ def sendpolicy():
             exMessage += "sequencecode不能为空;"
         if policymodel.policySolutionID == "":
             exMessage += "productid不能为空;"
-     
         if policymodel.applicanttype == "":
             exMessage += "applicanttype不能为空;"
         if policymodel.custId == "":
@@ -181,18 +183,16 @@ def sendpolicy():
 
         isSDS = True
         isDQM = False
-        if policymodel.departProvince != "" and policymodel.destinationProvice != "":
-            return  
+        # if policymodel.departProvince != "" and policymodel.destinationProvice != "":
+        #     a=9
         #三段模式，需校验  
-        elif policymodel.departStation != "" and policymodel.arriveStation != "":
+        if policymodel.departStation != "" and policymodel.arriveStation != "":
         #地区码模式，需校验
             isDQM = True
             isSDS = False
         else:  
-            return     
         #既不是三段模式，也不是地区码模式，需报错
             raise Exception("地址信息有误，请确认三段模式或地区码模式")
-
         if exMessage !="":
             raise Exception(exMessage)
 
@@ -201,14 +201,66 @@ def sendpolicy():
         result = []
         dataresult = model_to_dict(remotedata)
         if postdata['action'] == "apply":
-            if len(dataresult) > 0:
+            if len(dataresult) > 0:   
                 raise Exception("sequencecode已存在重复,请不要重复投递")
         # 地址校验
-        # if isDQM == True:
+        if isDQM == True:
+            startdistricts = districts_model.districts.query.filter(districts_model.districts.guid==postdata['startareacode'])
+            result = []
+            dataresult = model_to_dict(startdistricts)
+            if len(dataresult)!=1:
+                raise Exception("起运地地区码startareacode有误") 
+            enddistricts = districts_model.districts.query.filter(districts_model.districts.guid==postdata['endareacode'])
+            dataresult = model_to_dict(enddistricts)
+            if len(dataresult)!=1:
+                raise Exception("目的地地区码endareacode有误")
 
+        if isSDS == True:
+            startName = postdata['startprovince']
+            startcity = postdata['startcity']
+            startdistrict = postdata['startdistrict']
+            if startcity!="":
+                startName = startcity + "，" + startName
+            if startdistrict != "":
+                startName = startdistrict + "，" + startName
+            endName = postdata['endprovince']
+            endcity = postdata['endcity']
+            if endcity != "":
+                endName = endcity + "，" + endName
+            isStartValid = False
+            startData = districts_model.districts.query.filter(districts_model.districts.DisplayName == startName)
+            if len(startData) > 0:
+                isStartValid = True
+            else: 
+            # 二级缩进
+                startData = districts_model.districts.query.filter(districts_model.districts.DisplayName == startcity+'，'+startName)
+                if len(startData) > 0:
+                    isStartValid = True
+                else:
+                    # 三级缩进
+                        startData = districts_model.districts.query.filter(districts_model.districts.DisplayName == startName)
+                        if len(startData) > 0:
+                            isStartValid = True
+                if isStartValid == False:
+                    raise Exception("起运地省市区有误")
+            isEndValid = False
+            endData = districts_model.districts.query.filter(districts_model.districts.DisplayName == endName)
+            if len(endData) > 0:
+                isEndValid = True
+            else:
+                # 二级缩进
+                endData = districts_model.districts.query.filter(districts_model.districts.DisplayName == endcity+'，'+endName)
+                if len(endData) > 0:
+                    isEndValid = True
+                else:
+                    #  三级缩进
+                    endData = districts_model.districts.query.filter(districts_model.districts.DisplayName == endName)
+                    if len(endData) > 0:
+                        isEndValid = True
+            if isEndValid == False:
+                raise Exception("目的地省市区有误")
 
-
-
+        policymodel.save()
         # 投递保险公司 或 龙琨编号
         # 反馈客户
 
