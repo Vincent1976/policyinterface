@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, backref
 
 
 class RBProductInfo(db.Model):
-    __tablename__ = 'RBProductInfo'
+    __tablename__ = 'rbproductinfo'
     line_no = db.Column(db.String, primary_key=True)
     Insurance = db.Column(db.String(50))
     MainGlauses = db.Column(db.String(50))

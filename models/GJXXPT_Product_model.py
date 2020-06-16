@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, backref
 
 
 class GJXXPTProduct(db.Model):
-    __tablename__ = 'GJXXPT_Product'
+    __tablename__ = 'gjxxpt_product'
     GUID = db.Column(db.String, primary_key=True)
     appkey = db.Column(db.String(50), nullable=False)
     InsuranceCoverageCode = db.Column(db.String(50))

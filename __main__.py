@@ -16,6 +16,9 @@ from suds.client import Client
 import hashlib
 from models import GJXXPT_Product_model
 from models import RBProductInfo_model
+from models import InsurerSpec_model
+from models import ValidInsured_model
+import decimal
 
 
 # 创建flask对象
@@ -251,6 +254,9 @@ def postInsurer_HT(guid,appkey):
     try:
         #region 读取等待投保数据
         remotedata = policy_model.remotedata.query.filter(policy_model.remotedata.guid==guid).all()
+        remotedata = model_to_dict(remotedata)
+
+        ######公共信息General
         issueTime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "T") #出单时间
         insurancePolicy = "" #保单号
         serialNumber=guid.replace("-","") #流水号
@@ -260,130 +266,220 @@ def postInsurer_HT(guid,appkey):
         if len(GJXXPTProduct)==0 :
             raise Exception('产品配置信息不存在，投保失败')
         RBProductInfo=RBProductInfo_model.RBProductInfo.query.filter(RBProductInfo_model.RBProductInfo.line_no==GJXXPTProduct[0]['numCode']).all()
+        RBProductInfo = model_to_dict(RBProductInfo)
         if len(RBProductInfo)==0 :
             raise Exception('分产品配置信息不存在，投保失败')
-        #endregion
-        # insuranceCode=rsRBProductInfo[0] #险种代码
-        # insuranceName=rsRBProductInfo[1] #险种名称
-        # effectivTime=d_now_yyyy_mm_dd(policyresult['departDateTime']) #保险起期
-        # terminalTime=(datetime.date(d_now_yyyy_mm_dd(policyresult['departDateTime']))+datetime.timedelta(days=2)).strftime("%Y-%m-%d") #保险止期
-        # copy="1" #份数
-        # signTM=datetime.datetime.now().strftime("%Y-%m-%d") #签单时间
-        # sign="无" #货物标记 (默认国内传递空或者无) 
-        # packAndQuantity=policyresult['packageType']+policyresult['cargoWeight']+"吨" #包装及数量
-        # fregihtItem=policyresult['cargoName'] #货物项目
-        # invoiceNumber="" #发票号
-        # billNumber="详见运单" #提单号
-        # freightType=rsGJXXPTProduct[1] #货物类型（编码）
-        # freightDetail=rsGJXXPTProduct[2] #二级货物类型明细（编码）
-        # invoiceMoney=policyresult['cargeValue'] #发票金额
-        # invoiceBonus="1" #加成 (国内默认1)
-        # amt=Decimal(invoiceMoney)*Decimal(invoiceBonus) #保险金额
-        # amtCurrency="01" #保险金额币种（编码）(国内默认人民币01)
-        # exchangeRate="1" #汇率 (国内默认1)
+        #产品校验
+        insuranceCode=RBProductInfo[0]['MainGlausesCode'] #险种代码
+        insuranceName=RBProductInfo[0]['MainGlauses'] #险种名称
+        effectivTime=datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") #保险起期
+        terminalTime=(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")+datetime.timedelta(days=2)).strftime("%Y-%m-%d") #保险止期
+        copy="1" #份数
+        signTM=datetime.datetime.now().strftime("%Y-%m-%d") #签单时间
 
-        # #写入日志
-        # f1 = open('/tmp/POST_TO_HT/logs/'+d_now_yyyymmdd(datetime.datetime.now())+'sendpolicy.txt','a')
-        # f1.write(d_now_yyyy_mm_dd_HH_MM_SS(datetime.datetime.now()) + ", Request json：" + str(json.loads(postdata)))
-        # f1.close()
+        ######运输信息Freight
+        sign="无" #货物标记 (默认国内传递空或者无) 
+        packAndQuantity=remotedata[0]['packageType']+remotedata[0]['cargoWeight']+"吨" #包装及数量
+        fregihtItem=remotedata[0]['cargoName'] #货物项目
+        invoiceNumber="" #发票号
+        billNumber="详见运单" #提单号
+        freightType=GJXXPTProduct[0]['CargoTypeClassification1'] #货物类型（编码）
+        freightDetail=GJXXPTProduct[0]['BXcargoCode'] #二级货物类型明细（编码）
+        invoiceMoney=remotedata[0]['cargeValue'] #发票金额
+        invoiceBonus="1" #加成 (国内默认1)
+        amt=decimal.Decimal(invoiceMoney)*decimal.Decimal(invoiceBonus) #保险金额
+        amtCurrency="01" #保险金额币种（编码）(国内默认人民币01)
+        exchangeRate="1" #汇率 (国内默认1)
+        rate=decimal.Decimal(GJXXPTProduct[0]['Rate'].split('%',1)[0])/100
+        rate2=0
+        if remotedata[0]['policyRate']!="":
+            rate2=decimal.Decimal(remotedata[0]['policyRate'].split('%',1)[0])/100
+        chargeRate=rate*1000
+        if remotedata[0]['policyRate']== "":
+            chargeRate=rate2*1000 #费率‰ 
+        premium=remotedata[0]['insuranceFee'] #保险费
+        premiumCurrency="01" #保险费币种（编码）(国内默认人民币01)
+        premiumPrit=RBProductInfo[0]['AdditiveNo'] #保费打印
+        transportType=GJXXPTProduct[0]['TransportModeCode'] #运输方式（编码）
+        transportDetail=GJXXPTProduct[0]['BXcargoName'] #二级运输方式明细（编码）
+        trafficNumber=remotedata[0]['licenseId'] #保险费
+        flightsCheduled="" #航次
+        buildYear="" #建造年份
+        fromCountry="HTC01" #起运地国家（编码）
+
+        ######起运地国家（编码）/起运地
+        fromArea=remotedata[0]['departProvince']+remotedata[0]['departCity']+remotedata[0]['departDistrict'] #起运地 
+        passPort="" #途径港S
+        toContry="HTC01" #目的地国家 （编码）
+
+        ######目的地国家（编码）/目的地
+        toArea=remotedata[0]['destinationProvice']+remotedata[0]['destinationCity']+remotedata[0]['destinationDistrict'] #目的地  
+        surveyAdrID=RBProductInfo[0]['Additive'] #查勘地址编码
+        surveyAdr="" #查勘地址内容 
+        trantsTool="" #转运工具
+        startTM=str(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")).replace(" ", "T")
+        endTM=str(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")+datetime.timedelta(days=30)).replace(" ", "T")
+        originalSum="1" #正文份数 
+        datePritType="1" #日期打印方式(编码）(国内为中文1)
+        InsurerSpec=InsurerSpec_model.InsurerSpec.query.filter(InsurerSpec_model.InsurerSpec.numCode==RBProductInfo[0]['SpecialAnnounce']).all()
+        InsurerSpec = model_to_dict(InsurerSpec)
+        if len(InsurerSpec)==0 :
+            raise Exception('特别约定配置信息不存在，投保失败')
+        mark="" #特别约定 
+        creditNO="" #信用证编码
+        creditNODesc="" #信用证描述
+        trailerNum="" #挂车车牌号
+        payAddr="" #赔款偿付地
+
+        ######险种信息InsureRdr
+        rdrCde="SX300211" #编码 (国内)
+        rdrName="基本险" #名称 (国内)
+        rdrDesc="国内水路、陆路货物运输保险基本险" #描述
+        rdrCde1="SX400069" #编码 (国内)
+        rdrName1="盗抢险条款" #名称 (国内)
+        rdrDesc1="盗抢险条款" #描述
+
+        ######投保人信息Applicant
+        appCode="" #投保人编码
+        applicantName=remotedata[0]['custCoName'] #投保人名称
+        gender="" #投保人性别
+        birthday="" #投保人生日
+        IDType="99" #证件类别（传固定值99开票传97） 
+        ID="" #证件号码 
+        phone="" #固定电话 
+        cell="" #联系手机
+        zip="" #邮政编码
+        address="" #地址 
+        email="" #Email
+        taxDeduct="1" #是否要增值税发票 
+        accountBank="" #开户银行 
+        accountNumber="" #银行账号
+        if taxDeduct=="1":
+            ValidInsured=ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==appkey).all()
+            ValidInsured = model_to_dict(ValidInsured)
+            if len(ValidInsured)==0 :
+                raise Exception('开票信息配置信息不存在，投保失败')
+            accountBank=ValidInsured[0]['CertfCls']
+            accountNumber=ValidInsured[0]['ClntMrk']
+            IDType="97"
+            ID=ValidInsured[0]['CertfCde']
+            phone=ValidInsured[0]['Tel']
+            address=ValidInsured[0]['DetailAddress']
+
+        #####被保险人信息Insured
+        insuredName=remotedata[0]['insuredName'] #被保险人名称
+        insuredGender="" #被保险人性别
+        insuredBirthday="" #被保险人生日
+        insuredIDType="99" #证件类别
+        insuredID="不详" #证件号码 
+        insuredPhone="" #固定电话
+        insuredCell="" #联系手机
+        insuredZip="" #邮政编码
+        insuredAddress="" #地址
+        insuredEmail="" #Email
 
         url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl" #这里是你的webservice访问地址
         client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
         postXML = """<?xml version='1.0' encoding='utf-8'?>
                         <Policy>
                             <General>
-                                <IssueTime>2020-06-11T23:00:43</IssueTime>
-                                <SerialNumber>2b9035517b5944d5a80e0280e2fb3371</SerialNumber>
-                                <InsurancePolicy></InsurancePolicy>
-                                <InsuranceCode>3601</InsuranceCode>
-                                <InsuranceName>国内水路、陆路货物运输保险</InsuranceName>
-                                <EffectivTime>2020-06-11</EffectivTime>
-                                <TerminalTime>2020-07-11</TerminalTime>
-                                <Copy>1</Copy>
-                                <SignTM>2020-06-11</SignTM>
+                                <IssueTime>"""+str(issueTime)+"""</IssueTime>
+                                <SerialNumber>"""+str(serialNumber)+"""</SerialNumber>
+                                <InsurancePolicy>"""+str(insurancePolicy)+"""</InsurancePolicy>
+                                <InsuranceCode>"""+str(insuranceCode)+"""</InsuranceCode>
+                                <InsuranceName>"""+str(insuranceName)+"""</InsuranceName>
+                                <EffectivTime>"""+str(effectivTime)+"""</EffectivTime>
+                                <TerminalTime>"""+str(terminalTime)+"""</TerminalTime>
+                                <Copy>"""+str(copy)+"""</Copy>
+                                <SignTM>"""+str(signTM)+"""</SignTM>
                             </General>
                             <Freight>
-                                <Sign>无</Sign>
-                                <PackAndQuantity>纸盒,18吨</PackAndQuantity>
-                                <FregihtItem>香蕉</FregihtItem>
-                                <InvoiceNumber></InvoiceNumber>
-                                <BillNumber>详见运单</BillNumber>
-                                <FreightType>SX001402</FreightType>
-                                <FreightDetail>SX00140007</FreightDetail>
-                                <InvoiceMoney>60000</InvoiceMoney>
-                                <InvoiceBonus>1</InvoiceBonus>
-                                <Amt>60000</Amt>
-                                <AmtCurrency>01</AmtCurrency>
-                                <ExchangeRate>1</ExchangeRate>
-                                <ChargeRate>0.45000</ChargeRate>
-                                <Premium>27.00</Premium>
-                                <PremiumCurrency>01</PremiumCurrency>
-                                <PremiumPrit>02</PremiumPrit>
-                                <TransportType>SX001506</TransportType>
-                                <TransportDetail>13</TransportDetail>
-                                <TrafficNumber>赣C1075D</TrafficNumber>
-                                <FlightsCheduled></FlightsCheduled>
-                                <BuildYear></BuildYear>
-                                <FromCountry>HTC01</FromCountry>
-                                <FromArea>海南省三亚市</FromArea>
-                                <PassPort></PassPort>
-                                <ToContry>HTC01</ToContry>
-                                <ToArea>江西省南昌市</ToArea>
-                                <SurveyAdrID>501422495708</SurveyAdrID>
-                                <SurveyAdr></SurveyAdr>
-                                <TrantsTool></TrantsTool>
-                                <StartTM>2020-06-11T22:55:00</StartTM>
-                                <EndTM>2020-07-11T22:55:00</EndTM>
-                                <OriginalSum>1</OriginalSum>
-                                <DatePritType>1</DatePritType>
-                                <Mark></Mark>
-                                <CreditNO></CreditNO>
-                                <CreditNODesc></CreditNODesc>
-                                <TrailerNum></TrailerNum>
-                                <PayAddr></PayAddr>
+                                <Sign>"""+str(sign)+"""</Sign>
+                                <PackAndQuantity>"""+str(packAndQuantity)+"""</PackAndQuantity>
+                                <FregihtItem>"""+str(fregihtItem)+"""</FregihtItem>
+                                <InvoiceNumber>"""+str(invoiceNumber)+"""</InvoiceNumber>
+                                <BillNumber>"""+str(billNumber)+"""</BillNumber>
+                                <FreightType>"""+str(freightType)+"""</FreightType>
+                                <FreightDetail>"""+str(freightDetail)+"""</FreightDetail>
+                                <InvoiceMoney>"""+str(invoiceMoney)+"""</InvoiceMoney>
+                                <InvoiceBonus>"""+str(invoiceBonus)+"""</InvoiceBonus>
+                                <Amt>"""+str(amt)+"""</Amt>
+                                <AmtCurrency>"""+str(amtCurrency)+"""</AmtCurrency>
+                                <ExchangeRate>"""+str(exchangeRate)+"""</ExchangeRate>
+                                <ChargeRate>"""+str(chargeRate)+"""</ChargeRate>
+                                <Premium>"""+str(premium)+"""</Premium>
+                                <PremiumCurrency>"""+str(premiumCurrency)+"""</PremiumCurrency>
+                                <PremiumPrit>"""+str(premiumPrit)+"""</PremiumPrit>
+                                <TransportType>"""+str(transportType)+"""</TransportType>
+                                <TransportDetail>"""+str(transportDetail)+"""</TransportDetail>
+                                <TrafficNumber>"""+str(trafficNumber)+"""</TrafficNumber>
+                                <FlightsCheduled>"""+str(flightsCheduled)+"""</FlightsCheduled>
+                                <BuildYear>"""+str(buildYear)+"""</BuildYear>
+                                <FromCountry>"""+str(fromCountry)+"""</FromCountry>
+                                <FromArea>"""+str(fromArea)+"""</FromArea>
+                                <PassPort>"""+str(passPort)+"""</PassPort>
+                                <ToContry>"""+str(toContry)+"""</ToContry>
+                                <ToArea>"""+str(toArea)+"""</ToArea>
+                                <SurveyAdrID>"""+str(surveyAdrID)+"""</SurveyAdrID>
+                                <SurveyAdr>"""+str(surveyAdr)+"""</SurveyAdr>
+                                <TrantsTool>"""+str(trantsTool)+"""</TrantsTool>
+                                <StartTM>"""+str(startTM)+"""</StartTM>
+                                <EndTM>"""+str(endTM)+"""</EndTM>
+                                <OriginalSum>"""+str(originalSum)+"""</OriginalSum>
+                                <DatePritType>"""+str(datePritType)+"""</DatePritType>
+                                <Mark>"""+str(mark)+"""</Mark>
+                                <CreditNO>"""+str(creditNO)+"""</CreditNO>
+                                <CreditNODesc>"""+str(creditNODesc)+"""</CreditNODesc>
+                                <TrailerNum>"""+str(trailerNum)+"""</TrailerNum>
+                                <PayAddr>"""+str(payAddr)+"""</PayAddr>
                             </Freight>
                             <InsureRdrs>
                                 <InsureRdr>
-                                    <RdrCde>SX300211</RdrCde>
-                                    <RdrName>基本险</RdrName>
-                                    <RdrDesc>国内水路、陆路货物运输保险基本险</RdrDesc>
+                                    <RdrCde>"""+str(rdrCde)+"""</RdrCde>
+                                    <RdrName>"""+str(rdrName)+"""</RdrName>
+                                    <RdrDesc>"""+str(rdrDesc)+"""</RdrDesc>
                                 </InsureRdr>
                                 <InsureRdr>
-                                    <RdrCde>SX400069</RdrCde>
-                                    <RdrName>盗抢险条款</RdrName>
-                                    <RdrDesc>盗抢险条款</RdrDesc>
+                                    <RdrCde>"""+str(rdrCde1)+"""</RdrCde>
+                                    <RdrName>"""+str(rdrName1)+"""</RdrName>
+                                    <RdrDesc>"""+str(rdrDesc1)+"""</RdrDesc>
                                 </InsureRdr>
                             </InsureRdrs>
                             <Applicant>
-                                <AppCode></AppCode>
-                                <ApplicantName>江西零浩网络科技有限公司</ApplicantName>
-                                <Gender></Gender>
-                                <Birthday></Birthday>
-                                <IDType>97</IDType>
-                                <ID>91360121MA35KJA01N</ID>
-                                <Phone>15279188388</Phone>
-                                <Cell></Cell>
-                                <Zip></Zip>
-                                <Address>江西省南昌市南昌县莲塘镇莲安路158号百合佳苑住宅区2栋一单元401室</Address>
-                                <Email></Email>
-                                <TaxDeduct>1</TaxDeduct>
-                                <AccountBank>建设银行南昌支行</AccountBank>
-                                <AccountNumber>6236682020002708516</AccountNumber>
+                                <AppCode>"""+str(appCode)+"""</AppCode>
+                                <ApplicantName>"""+str(applicantName)+"""</ApplicantName>
+                                <Gender>"""+str(gender)+"""</Gender>
+                                <Birthday>"""+str(birthday)+"""</Birthday>
+                                <IDType>"""+str(IDType)+"""</IDType>
+                                <ID>"""+str(ID)+"""</ID>
+                                <Phone>"""+str(phone)+"""</Phone>
+                                <Cell>"""+str(cell)+"""</Cell>
+                                <Zip>"""+str(zip)+"""</Zip>
+                                <Address>"""+str(address)+"""</Address>
+                                <Email>"""+str(email)+"""</Email>
+                                <TaxDeduct>"""+str(taxDeduct)+"""</TaxDeduct>
+                                <AccountBank>"""+str(accountBank)+"""</AccountBank>
+                                <AccountNumber>"""+str(accountNumber)+"""</AccountNumber>
                             </Applicant>
                             <Insured>
-                                <InsuredName>陈小将</InsuredName>
-                                <Gender></Gender>
-                                <Birthday></Birthday>
-                                <IDType>99</IDType>
-                                <ID>不详</ID>
-                                <Phone></Phone>
-                                <Cell></Cell>
-                                <Zip></Zip>
-                                <Address></Address>
-                                <Email></Email>
+                                <InsuredName>"""+str(insuredName)+"""</InsuredName>
+                                <Gender>"""+str(insuredGender)+"""</Gender>
+                                <Birthday>"""+str(insuredBirthday)+"""</Birthday>
+                                <IDType>"""+str(insuredIDType)+"""</IDType>
+                                <ID>"""+str(insuredID)+"""</ID>
+                                <Phone>"""+str(insuredPhone)+"""</Phone>
+                                <Cell>"""+str(insuredCell)+"""</Cell>
+                                <Zip>"""+str(insuredZip)+"""</Zip>
+                                <Address>"""+str(insuredAddress)+"""</Address>
+                                <Email>"""+str(insuredEmail)+"""</Email>
                             </Insured>
                         </Policy>"""
         
+        #写入日志
+        f1 = open('/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicyHT.log','a')
+        f1.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ", Request XML" + str(postXML))
+        f1.close()
+
         Usr = "ZTSQ-LTH"
         Pwd = "ac86a441509773a126cf531f2bf88fa5"
         m = hashlib.md5()
@@ -391,8 +487,8 @@ def postInsurer_HT(guid,appkey):
         m.update(b)
         SignMD5 = m.hexdigest()
 
-        # result = client.service.IMPPolicy(postXML, Usr, Pwd, SignMD5.upper())
-        # print(result)
+        result = client.service.IMPPolicy(postXML, Usr, Pwd, SignMD5.upper())
+        print(result)
         return 'success'
     except Exception as err:
         traceback.print_exc()
