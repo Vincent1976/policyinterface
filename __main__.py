@@ -471,6 +471,7 @@ def postInsurer_HT(guid,appkey):
         insuredZip="" #邮政编码
         insuredAddress="" #地址
         insuredEmail="" #Email
+        #endregion
 
         url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl" #这里是你的webservice访问地址
         client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
