@@ -265,7 +265,7 @@ def sendpolicy():
 
         policymodel.save()
         # 投递保险公司 或 龙琨编号
-        # 反馈客户
+        # 反馈客户 
 
         result = {}
         result['responsecode'] = '1'
