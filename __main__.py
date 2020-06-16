@@ -14,6 +14,7 @@ import traceback
 import suds
 from suds.client import Client
 import hashlib
+import datetime
 from models import GJXXPT_Product_model
 from models import RBProductInfo_model
 from models import InsurerSpec_model
@@ -70,7 +71,7 @@ def sendpolicy():
         policymodel.channelOrderId = postdata['sequencecode']
         policymodel.Status = '等待投保'
         policymodel.CreateDate = datetime.datetime.now()
-        policymodel.appkey = postdata['action']            
+        policymodel.appkey = postdata['appkey']            
         policymodel.bizContent = postdata['usercode']
         policymodel.policyNo = postdata['solutionid']
         policymodel.policySolutionID = postdata['productid']
@@ -109,6 +110,7 @@ def sendpolicy():
         policymodel.mpAmount = postdata['weightunit']
         policymodel.volume = postdata['volume']
         policymodel.mpRate = postdata['volumeunit']
+
         #必填项校验
         exMessage = ''
         if policymodel.appkey == "":
@@ -121,8 +123,7 @@ def sendpolicy():
             exMessage += "sequencecode不能为空;"
         if policymodel.policySolutionID == "":
             exMessage += "productid不能为空;"
-        if policymodel.appkey == "":
-            exMessage += "action不能为空;"
+     
         if policymodel.applicanttype == "":
             exMessage += "applicanttype不能为空;"
         if policymodel.custId == "":
@@ -147,9 +148,24 @@ def sendpolicy():
             exMessage += "chargetypecode不能为空;"
         if policymodel.departDateTime == "":
             exMessage += "insuredatetime不能为空;"
-        elif policymodel.departDateTime.len != 14:
-           raise Exception("错误：起运日期InsureDateTime格式有误，正确格式：20170526153733;")
-        
+        else:        
+            if len(policymodel.departDateTime) != 14:
+                raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
+            else:
+                departDateTimes = policymodel.departDateTime 
+                policymodel.departDateTime = departDateTimes[0:4] + "-" + departDateTimes[4:6] + "-" + departDateTimes[6:8] + " "+ departDateTimes[8:10] + ":" + departDateTimes[10:12] + ":" + departDateTimes[12:14]
+
+                # 倒签单校验
+                # print(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+                # 获取当前时间多加一天 并转换为20200617104122(14位)
+                # print((datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y%m%d%H%M%S"))
+                # minutes = (policymodel.departDateTime - (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))).seconds*60
+                # print(minutes)
+                # m1 = policymodel.departDateTime
+                # m2 = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # print((datetime.datetime.now()+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"))
+                # if datetime.datetime.strptime(policymodel.departDateTime).datetime.timedelta(hours=1).Subtract(datetime.datetime.Now()).TotalMinutes < 0:
+                #     exMessage += "当前不允许倒签单;"
 
         if policymodel.transitSpot == "" and policymodel.vehiclenumber =="":
             exMessage += "运单号或者车牌号至少一个必填;"
@@ -163,14 +179,39 @@ def sendpolicy():
             exMessage += "descriptionofgoods不能为空;"
         if policymodel.cargoType == "":
             exMessage += "cargotype不能为空;"
-        if policymodel.cargoCount:
+        if policymodel.cargoCount == "":
             exMessage += "packagequantity不能为空;"
+
+        isSDS = True
+        isDQM = False
+        if policymodel.departProvince != "" and policymodel.destinationProvice != "":
+            return  
+        #三段模式，需校验  
+        elif policymodel.departStation != "" and policymodel.arriveStation != "":
+        #地区码模式，需校验
+            isDQM = True
+            isSDS = False
+        else:  
+            return     
+        #既不是三段模式，也不是地区码模式，需报错
+            raise Exception("地址信息有误，请确认三段模式或地区码模式")
+
         if exMessage !="":
             raise Exception(exMessage)
-        print(exMessage)
-            
 
-    
+        #单据唯一性
+        remotedata = policy_model.remotedata.query.filter(policy_model.remotedata.appkey==postdata['appkey'], policy_model.remotedata.systemOrderId==postdata['sequencecode']).order_by(policy_model.remotedata.CreateDate.desc()).all()
+        result = []
+        dataresult = model_to_dict(remotedata)
+        if postdata['action'] == "apply":
+            if len(dataresult) > 0:
+                raise Exception("sequencecode已存在重复,请不要重复投递")
+        # 地址校验
+        # if isDQM == True:
+
+
+
+
         # 投递保险公司 或 龙琨编号
         # 反馈客户
 
@@ -184,10 +225,11 @@ def sendpolicy():
     except Exception as err:
         result = {}
         result['responsecode'] = '0'
+        print(err)
         result['responsemessage'] = str(err)
         result['applicationserial'] = ''
         resultReturn = json.dumps(result)
-        return json.loads(resultReturn)+exMessage
+        return json.loads(resultReturn)
 
 
 # 注销接口
