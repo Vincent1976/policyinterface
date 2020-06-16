@@ -12,7 +12,7 @@ class districts(db.Model):
     DistrictLevelID = db.Column(db.String(1))
     DistrictLevelName = db.Column(db.String(2))
     LicenceCode = db.Column(db.String(10))
-    PostCode = db.Column(db.String(6))
+    PostCode = db.Column(db.String(6)) 
     Duplicate = db.Column(db.String(1))
     Pingyin = db.Column(db.String(50))
     DisplayName = db.Column(db.String(50))
