@@ -233,36 +233,99 @@ def sendpolicy():
                 endName = endcity + "，" + endName
             isStartValid = False
             startData = districts_model.districts.query.filter(districts_model.districts.DisplayName == startName)
-            if len(startData) > 0:
+            dataresult = model_to_dict(startData)
+            if len(dataresult) > 0:
                 isStartValid = True
             else: 
             # 二级缩进
                 startData = districts_model.districts.query.filter(districts_model.districts.DisplayName == startcity+'，'+startName)
-                if len(startData) > 0:
+                dataresult = model_to_dict(startData)
+                if len(dataresult) > 0:
                     isStartValid = True
                 else:
                     # 三级缩进
                         startData = districts_model.districts.query.filter(districts_model.districts.DisplayName == startName)
-                        if len(startData) > 0:
+                        dataresult = model_to_dict(startData)
+                        if len(dataresult) > 0:
                             isStartValid = True
                 if isStartValid == False:
                     raise Exception("起运地省市区有误")
             isEndValid = False
             endData = districts_model.districts.query.filter(districts_model.districts.DisplayName == endName)
-            if len(endData) > 0:
+            dataresult = model_to_dict(endData)
+            if len(dataresult) > 0:
                 isEndValid = True
             else:
                 # 二级缩进
                 endData = districts_model.districts.query.filter(districts_model.districts.DisplayName == endcity+'，'+endName)
-                if len(endData) > 0:
+                dataresult = model_to_dict(endData)
+
+                if len(dataresult) > 0:
                     isEndValid = True
                 else:
                     #  三级缩进
                     endData = districts_model.districts.query.filter(districts_model.districts.DisplayName == endName)
-                    if len(endData) > 0:
+                    dataresult = model_to_dict(endData)
+                    if len(dataresult) > 0:
                         isEndValid = True
             if isEndValid == False:
                 raise Exception("目的地省市区有误")
+        # 产品信息校验
+        # productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == postdata['appkey'],GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == postdata['productid'])
+        productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == '58054b759146320224dca9e58df873ad',GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == 'LK046016')
+        dataresult = model_to_dict(productdata)
+        if len(dataresult) !=1:
+            raise Exception("产品未配置!")
+        product_deductible = dataresult[0]['deductible']
+        product_insurancecoveragename = dataresult[0]['InsuranceCoverageName']
+        product_transportcode = dataresult[0]['TransportModeCode']
+        product_chargetypecode = dataresult[0]['ChargeTypeCode']
+        product_cargotype = dataresult[0]['CargoTypeClassification1']
+        if product_deductible == "按约定":
+            policymodel.termContent = product_deductible
+        if policymodel.mpObject == "按约定":
+            policymodel.mpObject = product_insurancecoveragename
+        if policymodel.trafficType == "按约定":
+            policymodel.trafficType = product_transportcode
+        if policymodel.mpRelation == "按约定":
+            policymodel.mpRelation = product_chargetypecode
+        if policymodel.cargoType == "按约定":
+            policymodel.cargoType = product_cargotype
+        if policymodel.termContent != product_deductible:
+            raise Exception("免赔额与产品定义不符")
+        if policymodel.mpObject != product_insurancecoveragename:
+            raise Exception("险别名称与产品定义不符")
+        if policymodel.trafficType != product_transportcode:
+            raise Exception("运输方式编码与产品定义不符")
+        if policymodel.mpRelation != product_chargetypecode:
+            raise Exception("计费方式与产品定义不符")
+        if policymodel.cargoType != product_cargotype:
+            raise Exception("货物类型编码与产品定义不符")
+
+        # 保费校验
+        product_lowestpremium = dataresult[0]['MonetaryAmount']#最低保费
+        product_rate = dataresult[0]['Rate'] #约定费率
+        product_maxAmount = dataresult[0]['PolicyAmount'] #最高保额
+
+        # 如果触发最低保费，则不校验费率，否则需校验
+
+        if product_maxAmount !="":
+            # 触发最高保额          
+            m3 = decimal.Decimal(str(decimal.Decimal(policymodel.cargeValue))) - decimal.Decimal(str(decimal.Decimal(product_maxAmount)))
+            if m3 > 0 :
+                print(product_maxAmount)
+                raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
+        if policymodel.claimLimit2 !="是" and policymodel.appkey == "84a54da7d11f45fecac39df7207bb216": #百世优货如果无需电子保单，则无最低保费
+            product_lowestpremium = "0.01"
+            # 如果触发最低保费，则不校验费率，否则需校验
+        if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) > decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
+            # 保费=保额*费率
+            _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
+            _premium = decimal.Decimal((decimal.Decimal(product_maxAmount) * _rate))
+        if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
+            raise Exception("保费计算有误")
+        elif decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) < decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
+            raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
 
         policymodel.save()
         # 投递保险公司 或 龙琨编号
