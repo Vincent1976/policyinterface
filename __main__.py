@@ -22,6 +22,7 @@ from models import districts_model
 from models import InsurerSpec_model
 from models import ValidInsured_model
 import decimal
+import logging
 
 
 # 创建flask对象
@@ -571,19 +572,26 @@ def postInsurer_HT(guid,appkey):
                         </Policy>"""
         
         #写入日志
-        f1 = open('/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicyHT.log','a')
-        f1.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ", Request XML" + str(postXML))
-        f1.close()
+        # f1 = open('/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicyHT.log','a')
+        # f1.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ", Request XML" + str(postXML))
+        # f1.close()
+        log_file = '/policyinterface2/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicyHT.log'
+        log_level = logging.WARNING
+        logging.basicConfig(filename=log_file, level=logging.WARNING)
+        logger = logging.getLogger()
+        logger.warning('This is a warning message!')
+        logger.error('This is a error message!')
+        logger.critical('This is a critical message!')
 
-        Usr = "ZTSQ-LTH"
-        Pwd = "ac86a441509773a126cf531f2bf88fa5"
-        m = hashlib.md5()
-        b = ("2Wsx1Qaz" + postXML).encode(encoding='utf-8')
-        m.update(b)
-        SignMD5 = m.hexdigest()
+        # Usr = "ZTSQ-LTH"
+        # Pwd = "ac86a441509773a126cf531f2bf88fa5"
+        # m = hashlib.md5()
+        # b = ("2Wsx1Qaz" + postXML).encode(encoding='utf-8')
+        # m.update(b)
+        # SignMD5 = m.hexdigest()
 
-        result = client.service.IMPPolicy(postXML, Usr, Pwd, SignMD5.upper())
-        print(result)
+        # result = client.service.IMPPolicy(postXML, Usr, Pwd, SignMD5.upper())
+        # print(result)
         return 'success'
     except Exception as err:
         traceback.print_exc()
