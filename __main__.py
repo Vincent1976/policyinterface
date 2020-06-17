@@ -23,6 +23,7 @@ from models import InsurerSpec_model
 from models import ValidInsured_model
 import decimal
 import logging
+import time
 
 
 # 创建flask对象
@@ -68,21 +69,24 @@ def sendpolicy():
     try:
         # 获取请求 
         postdata = json.loads(request.get_data(as_text=True))
-       # 保存客户运单
+
         policymodel = policy_model.remotedata()
+     # 保存客户运单
         policymodel.guid = str(uuid.uuid1())
         policymodel.channelOrderId = postdata['sequencecode']
         policymodel.Status = '等待投保'
         policymodel.CreateDate = datetime.datetime.now()
+        # policymodel.channelOrderId = newPolicyNo
+        # policymodel.systemOrderId = policymodel['sequencecode']
         policymodel.appkey = postdata['appkey']            
         policymodel.bizContent = postdata['usercode']
         policymodel.policyNo = postdata['solutionid']
         policymodel.policySolutionID = postdata['productid']
-        policymodel.applicanttype = postdata['applicanttype']
+        policymodel.custProperty = postdata['applicanttype']
         policymodel.custId = postdata['applicantidnumber']
         policymodel.insuredName = postdata['insuredname']
-        policymodel.insuredtype = postdata['insuredtype']
-        policymodel.shipperProperty = postdata['insuredidnumber']
+        policymodel.shipperProperty = postdata['insuredtype']
+        policymodel.shipperId = postdata['insuredidnumber']
         policymodel.shipperContact = postdata['spname']
         policymodel.cargeValue = postdata['policyamount']
         policymodel.policyRate = postdata['rate']
@@ -113,7 +117,6 @@ def sendpolicy():
         policymodel.mpAmount = postdata['weightunit']
         policymodel.volume = postdata['volume']
         policymodel.mpRate = postdata['volumeunit']
-
         #必填项校验
         exMessage = ''
         
@@ -127,15 +130,15 @@ def sendpolicy():
             exMessage += "sequencecode不能为空;"
         if policymodel.policySolutionID == "":
             exMessage += "productid不能为空;"
-        if policymodel.applicanttype == "":
+        if policymodel.custProperty == "":
             exMessage += "applicanttype不能为空;"
         if policymodel.custId == "":
             exMessage += "applicantidnumber不能为空;"
         if policymodel.insuredName == "":
             exMessage += "insuredName不能为空;"
-        if policymodel.insuredtype == "":
-            exMessage += "insuredtype不能为空;"
         if policymodel.shipperProperty == "":
+            exMessage += "insuredtype不能为空;"
+        if policymodel.shipperId == "":
             exMessage += "insuredidnumber不能为空;"
         if policymodel.cargeValue == "":
             exMessage += "policyamount不能为空;"
@@ -154,22 +157,25 @@ def sendpolicy():
         else:        
             if len(policymodel.departDateTime) != 14:
                 raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
-            else:
-                departDateTimes = policymodel.departDateTime 
-                policymodel.departDateTime = departDateTimes[0:4] + "-" + departDateTimes[4:6] + "-" + departDateTimes[6:8] + " "+ departDateTimes[8:10] + ":" + departDateTimes[10:12] + ":" + departDateTimes[12:14]
-
+            else:                   
                 # 倒签单校验
                 # print(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
                 # 获取当前时间多加一天 并转换为20200617104122(14位)
                 # print((datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y%m%d%H%M%S"))
-                # minutes = (policymodel.departDateTime - (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))).seconds*60
-                # print(minutes)
+                # minutes = (policymodel.departDateTime - (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
                 # m1 = policymodel.departDateTime
                 # m2 = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 # print((datetime.datetime.now()+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"))
                 # if datetime.datetime.strptime(policymodel.departDateTime).datetime.timedelta(hours=1).Subtract(datetime.datetime.Now()).TotalMinutes < 0:
                 #     exMessage += "当前不允许倒签单;"
-
+                departDateTimes = policymodel.departDateTime 
+                # policymodel.departDateTime = int(departDateTimes[0:4]) + "-" + int(departDateTimes[4:6]) + "-" + int(departDateTimes[6:8]) + " "+ int(departDateTimes[8:10]) + ":" + int(departDateTimes[10:12])+ ":" + int(departDateTimes[12:14])+"."+"000000"
+                print(policymodel.departDateTime)
+                time = int(departDateTimes)+10000 # 加10000相当于一个小时
+                now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+                if time - now < 100: # 100相当于小于1分钟
+                    exMessage += "当前不允许倒签单;"
+                
         if policymodel.transitSpot == "" and policymodel.vehiclenumber =="":
             exMessage += "运单号或者车牌号至少一个必填;"
         if policymodel.trafficType == "":
@@ -271,7 +277,7 @@ def sendpolicy():
             if isEndValid == False:
                 raise Exception("目的地省市区有误")
         # 产品信息校验
-        # productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == postdata['appkey'],GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == postdata['productid'])
+        productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == postdata['appkey'],GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == postdata['productid'])
         productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == '58054b759146320224dca9e58df873ad',GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == 'LK046016')
         dataresult = model_to_dict(productdata)
         if len(dataresult) !=1:
@@ -326,10 +332,32 @@ def sendpolicy():
             raise Exception("保费计算有误")
         elif decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) < decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
             raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
-
+        # 获取子保单号
+        if postdata['action'] == "apply":
+            ZZ = postdata['solutionid']
+            if postdata['action'] == "apply":
+                sql = "select MAX(channelOrderId) from RemoteData WHERE policyNo='%s' AND appkey='%s'" %(ZZ, postdata['appkey'])
+                dataresult = query(sql)
+                if len(dataresult) == 0:
+                    newPolicyNo = ZZ + "10000001"
+                else:
+                    if (dataresult[0][0] is None):
+                        newPolicyNo = ZZ + "10000001"
+                    else:
+                        aaa = dataresult[0][0]
+                        newPolicyNo = ZZ + str(int(str(aaa)[len(ZZ):8] + 1))
+   
+        
         policymodel.save()
         # 投递保险公司 或 龙琨编号
-        # 反馈客户 
+        # 反馈客户
+
+        #写入日志
+        log_file = 'E:/policyinterface2/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicy.log'
+        log_format = '%(message)s'
+        logging.basicConfig(filename=log_file, level=logging.WARNING, format=log_format)
+        logger = logging.getLogger()
+        logger.warning(str(postdata))
 
         result = {}
         result['responsecode'] = '1'
