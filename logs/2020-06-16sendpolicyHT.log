@@ -1,0 +1,10 @@
+2020-06-16 17:57:24,844[WARNING]: This is a warning message!
+2020-06-16 17:57:24,844[ERROR]: This is a error message!
+2020-06-16 17:57:24,844[CRITICAL]: This is a critical message!
+2020-06-16 17:57:24,884[INFO]: 127.0.0.1 - - [16/Jun/2020 17:57:24] "[37mGET /postInsurer_HT/c2bcf778-3a18-41f9-b838-3a8ba43cfcce/58054b759146320224dca9e58df873ad HTTP/1.1[0m" 200 -
+2020-06-16 17:59:05,070[INFO]:  * Detected change in 'E:\\policyinterface2\\__main__.py', reloading
+WARNING:root:This is a warning message!
+ERROR:root:This is a error message!
+CRITICAL:root:This is a critical message!
+INFO:werkzeug:127.0.0.1 - - [16/Jun/2020 17:59:10] "[37mGET /postInsurer_HT/c2bcf778-3a18-41f9-b838-3a8ba43cfcce/58054b759146320224dca9e58df873ad HTTP/1.1[0m" 200 -
+INFO:werkzeug: * Detected change in 'E:\\policyinterface2\\__main__.py', reloading

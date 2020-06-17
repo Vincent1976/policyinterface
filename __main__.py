@@ -22,6 +22,7 @@ from models import districts_model
 from models import InsurerSpec_model
 from models import ValidInsured_model
 import decimal
+import logging
 
 
 # 创建flask对象
@@ -534,6 +535,7 @@ def postInsurer_HT(guid,appkey):
         insuredZip="" #邮政编码
         insuredAddress="" #地址
         insuredEmail="" #Email
+        #endregion
 
         url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl" #这里是你的webservice访问地址
         client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
@@ -633,11 +635,14 @@ def postInsurer_HT(guid,appkey):
                         </Policy>"""
         
         #写入日志
-        f1 = open('/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicyHT.log','a')
-        f1.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ", Request XML" + str(postXML))
-        f1.close()
+        log_file = '/policyinterface2/logs/'+datetime.datetime.now().strftime("%Y-%m-%d")+'sendpolicyHT.log'
+        log_level = logging.WARNING
+        log_format = '%(message)s'
+        logging.basicConfig(filename=log_file, level=logging.WARNING, format=log_format)
+        logger = logging.getLogger()
+        logger.warning(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ", Request XML" + str(postXML))
 
-        Usr = "ZTSQ-LTH"
+        Usr = "ZTSQ-LTH"  
         Pwd = "ac86a441509773a126cf531f2bf88fa5"
         m = hashlib.md5()
         b = ("2Wsx1Qaz" + postXML).encode(encoding='utf-8')
