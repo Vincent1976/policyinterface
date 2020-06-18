@@ -69,7 +69,6 @@ def sendpolicy():
     try:
         # 获取请求 
         postdata = json.loads(request.get_data(as_text=True))
-
         policymodel = policy_model.remotedata()
      # 保存客户运单
         policymodel.guid = str(uuid.uuid1())
@@ -366,6 +365,102 @@ def sendpolicy():
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
 
+    except Exception as err:
+        result = {}
+        result['responsecode'] = '0'
+        print(err)
+        result['responsemessage'] = str(err)
+        result['applicationserial'] = ''
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)
+
+# 德坤接口
+@app.route('/dekun', methods = ['POST'])
+def dekun(): 
+    try:
+        remoteuser = request.values['remoteuser'] # 接收传参
+        # print(remoteuser)
+        datatext = request.data.decode('utf-8') # 接收文本并解决中文乱码
+        postdata = json.loads(datatext[10:]) # 截取文本并转json
+        policymodel = policy_model.remotedata()
+        # print("json数据",postdata)
+        policymodel = policy_model.remotedata()
+        policymodel.guid = str(uuid.uuid1())
+        policymodel.channelOrderId = postdata['SequenceCode']
+        policymodel.Status = '等待投保'
+        policymodel.CreateDate = datetime.datetime.now()
+        policymodel.policyNo = postdata['InsuranceBillCode'] # 大保单号
+        policymodel.appkey = remoteuser # 大保单号
+        policymodel.custId = '1' # 投保人的Id
+        PartyInformation = postdata['PartyInformation'] # 获取数组
+        policymodel.custCoName = PartyInformation[0]['PartyName'] # 投保人名称
+        policymodel.custUserName = PartyInformation[0]['UnitName'] # 投保人姓名
+        policymodel.departSpot = PartyInformation[0]['UnitAddress']
+        policymodel.custPhone = PartyInformation[0]['UnitPhone'] # 投保人电话
+        policymodel.custEmail = PartyInformation[0]['UnitEmail'] # 投保人邮箱地址
+        policymodel.insuredName = PartyInformation[1]['PartyName'] # 被保人姓名
+        policymodel.deliveryAddress = PartyInformation[1]['UnitAddress']
+        ChargeInformation = postdata['ChargeInformation']
+        policymodel.departDateTime = ChargeInformation[0]['InsureDateTime'] # 预计起运时间 20170526153733
+        policymodel.cargeValue = ChargeInformation[0]['SumInsuredMonetaryAmount'] # 货物价值
+        policymodel.policyRate = ChargeInformation[0]['Rate'] # 费率
+        policymodel.insuranceFee = ChargeInformation[0]['MonetaryAmount'] #保费
+        TransportInformation = postdata['TransportInformation']
+        policymodel.systemOrderId = TransportInformation[0]['OriginalDocumentNumber']
+        policymodel.shippingType = TransportInformation[0]['ShippingType'] # 装载方式
+        policymodel.lotType = TransportInformation[0]['LotType'] # 整车/零担
+        PlaceOrLocationInformation = TransportInformation[0]['PlaceOrLocationInformation']
+        policymodel.transitSpot = PlaceOrLocationInformation[0]['PlaceOrLocation'] # 中转地
+        policymodel.departProvince = PlaceOrLocationInformation[0]['PlaceProvince'] # 出发地-省
+        policymodel.destinationCity = PlaceOrLocationInformation[0]['PlaceCity'] # 到达地-市?
+        GoodsInformation = TransportInformation[0]['GoodsInformation']
+        policymodel.cargoName = GoodsInformation[0]['DescriptionOfGoods'] # 货物名称
+        policymodel.cargoType = GoodsInformation[0]['CargoTypeClassification1'] # 货物大类
+        policymodel.packageType = GoodsInformation[0]['PackageType'] # 包装类型
+        policymodel.cargoCount = GoodsInformation[0]['PackageQuantity'] # 货物数量
+        policymodel.stealFlag = 'Y' # 附加盗窃标志
+
+        # remoteuser 判断
+        if remoteuser !="8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D":
+            raise Exception("接口参数被拒绝")
+        # 必填项校验
+        dragoninsProductCode =  ChargeInformation[0]['InsuranceCoverageCode'] #龙琨产品编号
+        if dragoninsProductCode =="":
+            raise Exception("产品编码InsuranceCoverageCode必须传递")
+        if PartyInformation[0]['PartyFunctionCode'] == "BM":
+            if policymodel.custCoName == "":
+                raise Exception("投保人的PartyName必须传递")
+            if PartyInformation[0]['LogisticsExchangeCode'] == "":
+                raise Exception("投保人的LogisticsExchangeCode必须传递")
+            if PartyInformation[0]['CodeListQualifier'] == "":
+                raise Exception("投保人的CodeListQualifier必须传递")                
+        if PartyInformation[1]['PartyFunctionCode'] == "BN":
+            if policymodel.insuredName == "":
+                raise Exception("被保险人的PartyName必须传递")
+            if PartyInformation[1]['CodeListQualifier'] == "":
+                raise Exception("投保人的CodeListQualifier必须传递")
+
+        # channelOrderId重复性校验
+        existData = policy_model.remotedata.query.filter(policy_model.remotedata.appkey==remoteuser, policy_model.remotedata.channelOrderId==postdata['SequenceCode'])
+        dataresult = model_to_dict(existData)
+        if len(dataresult) > 0 :
+            raise Exception("单据编号SequenceCode重复，不能重复投递！")
+
+        if policymodel.cargoType == "" or policymodel.cargoType.lower() == "null":
+            raise Exception("错误：PackageType必须传递且不能为空;")
+        if policymodel.cargoName == "" or policymodel.cargoName.lower() == "null":
+            raise Exception("错误：DescriptionOfGoods必须传递且不能为空;")
+        if policymodel.packageType == "" or policymodel.packageType.lower() == "null":
+            raise Exception("错误：PackageType必须传递且不能为空;")
+        if policymodel.departDateTime == "":
+            raise Exception("InsureDateTime必须传递")
+        policymodel.save()
+        result = {}
+        result['responsecode'] = '1'
+        result['responsemessage'] = '投保成功'
+        result['applicationserial'] = '投保成功'
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)
     except Exception as err:
         result = {}
         result['responsecode'] = '0'
