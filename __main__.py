@@ -418,7 +418,10 @@ def dekun():
         policymodel.cargoType = GoodsInformation[0]['CargoTypeClassification1'] # 货物大类
         policymodel.packageType = GoodsInformation[0]['PackageType'] # 包装类型
         policymodel.cargoCount = GoodsInformation[0]['PackageQuantity'] # 货物数量
+        policymodel.trafficType = TransportInformation[0]['TransportModeCode'] # 运输方式
+        policymodel.licenseId = TransportInformation[0]['VehicleNumber'] # 车辆编号
         policymodel.stealFlag = 'Y' # 附加盗窃标志
+
 
         # remoteuser 判断
         if remoteuser !="8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D":
@@ -445,15 +448,146 @@ def dekun():
         dataresult = model_to_dict(existData)
         if len(dataresult) > 0 :
             raise Exception("单据编号SequenceCode重复，不能重复投递！")
-
         if policymodel.cargoType == "" or policymodel.cargoType.lower() == "null":
-            raise Exception("错误：PackageType必须传递且不能为空;")
+            raise Exception("错误：CargoTypeClassification1必须传递且不能为空;")
         if policymodel.cargoName == "" or policymodel.cargoName.lower() == "null":
             raise Exception("错误：DescriptionOfGoods必须传递且不能为空;")
         if policymodel.packageType == "" or policymodel.packageType.lower() == "null":
             raise Exception("错误：PackageType必须传递且不能为空;")
         if policymodel.departDateTime == "":
             raise Exception("InsureDateTime必须传递")
+        if policymodel.cargeValue == "":
+            raise Exception("SumInsuredMonetaryAmount必须传递")
+        if policymodel.insuranceFee == "":
+            raise Exception("MonetaryAmount必须传递")
+        # 根据平台账号和产品编号，获取产品信息，用于按协议方式取值，及产品信息核对
+        productData = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == remoteuser,GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == ChargeInformation[0]['InsuranceCoverageCode'])
+        # productData = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == '58054b759146320224dca9e58df873ad',GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == 'LK046016')
+
+        dataresult = model_to_dict(productData)
+        # 与龙琨产品校对
+        if len(dataresult) == 0:
+            raise Exception("指定的InsuranceCoverageCode（险别代码）: " , ChargeInformation[0]['InsuranceCoverageCode'],"不存在，请联系龙琨系统管理员")
+        _InsuranceCode = dataresult[0]['InsuranceCode']
+        _InsuranceCoverageName = dataresult[0]['InsuranceCoverageName']
+        _ChargeTypeCode = dataresult[0]['ChargeTypeCode']
+        _deductible = dataresult[0]['deductible']
+        _MonetaryAmount = dataresult[0]["MonetaryAmount"]
+        _CargoTypeClassification1 = dataresult[0]["CargoTypeClassification1"]
+        _TransportModeCode = dataresult[0]["TransportModeCode"]
+        if ChargeInformation[0]['InsuranceCode'] != _InsuranceCode:
+            raise Exception("险种代码(InsuranceCode)与龙琨产品定义不一致")
+        if ChargeInformation[0]['InsuranceCoverageName'] != _InsuranceCoverageName:
+            raise Exception("险别名称(InsuranceCoverageName)与龙琨产品定义不一致")
+        if ChargeInformation[0]['ChargeTypeCode'] != _ChargeTypeCode:
+            raise Exception("计费方式代码(ChargeTypeCode)与龙琨产品定义不一致")
+        # 指定字符串或不在指定范围内时，返回-1
+        if policymodel.policyRate.find('%') < 0:
+            raise Exception("费率(Rate)格式有误，应该带百分号，如：0.02%")
+        Rate = policymodel.policyRate # 获取费率
+        ReturnIndex = Rate.find('%')  # 返回索引
+        custrate = decimal.Decimal(Rate[0:ReturnIndex])/100
+        custpremium = decimal.Decimal(policymodel.insuranceFee)
+        custamount = decimal.Decimal(policymodel.cargeValue)
+
+        if ChargeInformation[0]['deductible'] != _deductible:
+            raise Exception("免赔额(deductible)与龙琨产品定义不一致")
+        # 客户保额*费率=客户保费   客户保费>=龙琨最低保费（倒算规则要给客户）
+        if (str(custpremium)) != 0.01:
+            if decimal.Decimal(round(custamount * custrate,2)) != custpremium: # round(a, 2)四舍五入保留两位小数
+                raise Exception("保额乘以费率不等于保费")
+            if custpremium < decimal.Decimal(_MonetaryAmount):
+                raise Exception("保费(MonetaryAmount)不能低于最低保费")
+            if policymodel.cargoType != _CargoTypeClassification1:
+                raise Exception("货物类型大类(CargoTypeClassification1)与龙琨产品定义不一致")
+            if policymodel.trafficType != _TransportModeCode:
+                raise Exception("运输方式编码(TransportModeCode)与龙琨产品定义不一致")
+     
+
+
+        if PlaceOrLocationInformation[0]['PlaceLocationQualifier'] == "5":
+            detailDeparture = policymodel.transitSpot # 出发地详细地址
+            departProvince = policymodel.departProvince # 出发地-省
+            departCity = policymodel.destinationCity # 出发地-市
+            departDistrict = PlaceOrLocationInformation[0]['PlaceDistrict'] # 出发地-县
+            _departProvince = departProvince
+        if PlaceOrLocationInformation[1]['PlaceLocationQualifier'] == "8":
+            detailDestination = PlaceOrLocationInformation[1]['PlaceOrLocation'] # 到达地详细地址
+            destinationProvice = PlaceOrLocationInformation[1]['PlaceProvince'] # 到达地-省
+            destinationCity = PlaceOrLocationInformation[1]['PlaceCity'] # 到达地-市?
+            destinationDistrict = PlaceOrLocationInformation[1]['PlaceDistrict'] # 到达地-县?
+            _destinationProvice = destinationProvice
+
+        consigneeName = "" # 收货人名称
+        consigneePhone = "" # 收货人电话    
+        cargoCount = policymodel.cargoCount # 货物数量
+        cargoWeight = cargoCount + GoodsInformation[0]['PackageUnit']
+        # decimal.Decimal lowestInsuranceFee = 0
+        if policymodel.policyNo == "" or policymodel.policyNo.lower() == "null":
+            raise Exception("错误：InsuranceBillCode必须传递且不能为空; ")
+        if policymodel.licenseId == "":
+            if policymodel.systemOrderId == "" or policymodel.systemOrderId.lower() == "null":
+                raise Exception("错误：OriginalDocumentNumber必须传递且不能为空; ")
+        else:
+            if policymodel.systemOrderId == "" or policymodel.systemOrderId.lower() == "null":
+                policymodel.systemOrderId = TransportInformation[0]['OriginalDocumentNumber']
+        if policymodel.custCoName == "" or policymodel.custCoName.lower() == "null":
+            raise Exception("错误：投保人的PartyName必须传递且不能为空; ")
+        if policymodel.insuredName == "" or policymodel.insuredName.lower() == "null":
+            raise Exception("错误：被保险人的PartyName必须传递且不能为空; ")
+        if policymodel.cargeValue == "" or policymodel.cargeValue.lower() == "null":
+            raise Exception("错误：SumInsuredMonetaryAmount必须传递且不能为空;")
+        if policymodel.insuranceFee == "" or policymodel.insuranceFee.lower() == "null":
+            raise Exception("错误：MonetaryAmount必须传递且不能为空; ")
+        else:
+            # 最低保费控制
+            if decimal.Decimal(policymodel.insuranceFee) < 0:
+                raise Exception("错误：保费不能低于最低保费; ")
+
+        if policymodel.trafficType == "" or policymodel.trafficType.lower() == "null":
+            raise Exception("错误：TransportModeCode必须传递且不能为空; ")
+        else:
+            if policymodel.trafficType == "1":
+                policymodel.trafficType = "水运"
+            elif policymodel.trafficType == "2":
+                policymodel.trafficType = "铁路"
+            elif policymodel.trafficType == "3":
+                policymodel.trafficType = "汽运"
+            elif policymodel.trafficType == "4":
+                policymodel.trafficType = "空运"
+            elif policymodel.trafficType == "8":
+                policymodel.trafficType = "水运"
+            else:
+                raise Exception("错误：TransportModeCode无法识别; ")
+        if policymodel.departDateTime == "" or policymodel.departDateTime.lower() == "null":
+            raise Exception("错误：InsureDateTime必须传递且不能为空; ")
+        else:
+            #20170526153733
+            if len(policymodel.departDateTime) != 14:
+                raise Exception("错误：InsureDateTime格式有误，正确格式：20170526153733; ")
+            else:
+                departDateTimes = policymodel.departDateTime
+                policymodel.departDateTime = departDateTimes[0:4] + "-" + departDateTimes[4:6] + "-" + departDateTimes[6:8] + " "+ departDateTimes[8:10] + ":" + departDateTimes[10:12]+ ":" + departDateTimes[12:14]
+
+         # 如果对接众安，需要校验省市区三段式的有效性（参照单票投保）
+        if departProvince == "" and departCity == "" and departDistrict == "" and detailDeparture == "":
+            raise Exception("错误：起运地详细地址或省市区至少有一项不为空; ")
+        if destinationProvice == "" and destinationCity == "" and destinationDistrict == "" and detailDestination == "":
+            raise Exception("错误：目的地详细地址或省市区至少有一项不为空; ")
+        maxData = "select MAX(policySolutionID) from  remotedata WHERE policyNo='" + policymodel.policyNo + "' AND appkey='" + remoteuser + "'"
+        print(maxData)
+        dataresult = query(maxData)
+        print(len(dataresult))
+        if len(dataresult) == 0:
+            newPolicyNo = policymodel.policyNo + "00000001"
+        else:
+            if (dataresult[0][0] is None):
+                newPolicyNo = policymodel.policyNo + "00000001"
+            else:
+                aaa = policymodel.policyNo[6:]
+                newPolicyNo = "COPSHH" + str(int(aaa) + 1)
+        policymodel.policySolutionID = newPolicyNo
+
         policymodel.save()
         result = {}
         result['responsecode'] = '1'
