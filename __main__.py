@@ -24,18 +24,19 @@ from models import ValidInsured_model
 import decimal
 import logging
 import time
+import pymssql #引入pymssql模块
+import requests
+import pymysql
 
 
 # 创建flask对象
 app = Flask(__name__)
 appowner = 'Draginins'  # 软件所有者
 
-
 # 数据库初始化
 app.config.from_object(config)
 app.debug = True
 db.init_app(app)
-
 
 # 自定义异常
 class MyException(Exception):
@@ -277,7 +278,7 @@ def sendpolicy():
                 raise Exception("目的地省市区有误")
         # 产品信息校验
         productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == postdata['appkey'],GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == postdata['productid'])
-        productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == '58054b759146320224dca9e58df873ad',GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == 'LK046016')
+        # productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == '58054b759146320224dca9e58df873ad',GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == 'LK046016')
         dataresult = model_to_dict(productdata)
         if len(dataresult) !=1:
             raise Exception("产品未配置!")
@@ -390,6 +391,8 @@ def dekun():
         policymodel.Status = '等待投保'
         policymodel.CreateDate = datetime.datetime.now()
         policymodel.policyNo = postdata['InsuranceBillCode'] # 大保单号
+        policymodel.shipId = postdata['shipId']
+
         policymodel.appkey = remoteuser # 大保单号
         policymodel.custId = '1' # 投保人的Id
         PartyInformation = postdata['PartyInformation'] # 获取数组
@@ -421,13 +424,20 @@ def dekun():
         policymodel.trafficType = TransportInformation[0]['TransportModeCode'] # 运输方式
         policymodel.licenseId = TransportInformation[0]['VehicleNumber'] # 车辆编号
         policymodel.stealFlag = 'Y' # 附加盗窃标志
+        policymodel.departCity = postdata['departCity']
+        policymodel.destinationDistrict = postdata['destinationDistrict']
+        policymodel.cargoWeight = postdata['cargoWeight']
+
+        dragoninsProductCode =  ChargeInformation[0]['InsuranceCoverageCode'] #龙琨产品编号
+
 
 
         # remoteuser 判断
         if remoteuser !="8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D":
             raise Exception("接口参数被拒绝")
         # 必填项校验
-        dragoninsProductCode =  ChargeInformation[0]['InsuranceCoverageCode'] #龙琨产品编号
+        
+
         if dragoninsProductCode =="":
             raise Exception("产品编码InsuranceCoverageCode必须传递")
         if PartyInformation[0]['PartyFunctionCode'] == "BM":
@@ -461,20 +471,27 @@ def dekun():
         if policymodel.insuranceFee == "":
             raise Exception("MonetaryAmount必须传递")
         # 根据平台账号和产品编号，获取产品信息，用于按协议方式取值，及产品信息核对
-        productData = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == remoteuser,GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == ChargeInformation[0]['InsuranceCoverageCode'])
-        # productData = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == '58054b759146320224dca9e58df873ad',GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == 'LK046016')
+ 
 
-        dataresult = model_to_dict(productData)
+        sql = "select * from gjxxpt_product WHERE appkey='%s' AND InsuranceCoverageCode='%s'" %(remoteuser, dragoninsProductCode)
+        dataresult = query(sql)
+        # productData = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == remoteuser ,GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == dragoninsProductCode)
+        # print(productData)
+        # dataresult = model_to_dict(dataresult)
         # 与龙琨产品校对
         if len(dataresult) == 0:
-            raise Exception("指定的InsuranceCoverageCode（险别代码）: " , ChargeInformation[0]['InsuranceCoverageCode'],"不存在，请联系龙琨系统管理员")
-        _InsuranceCode = dataresult[0]['InsuranceCode']
-        _InsuranceCoverageName = dataresult[0]['InsuranceCoverageName']
-        _ChargeTypeCode = dataresult[0]['ChargeTypeCode']
-        _deductible = dataresult[0]['deductible']
-        _MonetaryAmount = dataresult[0]["MonetaryAmount"]
-        _CargoTypeClassification1 = dataresult[0]["CargoTypeClassification1"]
-        _TransportModeCode = dataresult[0]["TransportModeCode"]
+            raise Exception("指定的InsuranceCoverageCode（险别代码）: " , dragoninsProductCode,"不存在，请联系龙琨系统管理员")
+
+        _InsuranceCode = dataresult[0][4]
+        _InsuranceCoverageName = dataresult[0][5]
+      
+
+        _ChargeTypeCode = dataresult[0][6]
+        _deductible = dataresult[0][8]
+        _MonetaryAmount = dataresult[0][9]
+        _CargoTypeClassification1 = dataresult[0][10]
+        
+        _TransportModeCode = dataresult[0][12]
         if ChargeInformation[0]['InsuranceCode'] != _InsuranceCode:
             raise Exception("险种代码(InsuranceCode)与龙琨产品定义不一致")
         if ChargeInformation[0]['InsuranceCoverageName'] != _InsuranceCoverageName:
@@ -500,8 +517,8 @@ def dekun():
                 raise Exception("保费(MonetaryAmount)不能低于最低保费")
             if policymodel.cargoType != _CargoTypeClassification1:
                 raise Exception("货物类型大类(CargoTypeClassification1)与龙琨产品定义不一致")
-            if policymodel.trafficType != _TransportModeCode:
-                raise Exception("运输方式编码(TransportModeCode)与龙琨产品定义不一致")
+            # if policymodel.trafficType != _TransportModeCode:
+            #     raise Exception("运输方式编码(TransportModeCode)与龙琨产品定义不一致")
      
 
 
@@ -562,7 +579,7 @@ def dekun():
         if policymodel.departDateTime == "" or policymodel.departDateTime.lower() == "null":
             raise Exception("错误：InsureDateTime必须传递且不能为空; ")
         else:
-            #20170526153733
+            #20170526 153733
             if len(policymodel.departDateTime) != 14:
                 raise Exception("错误：InsureDateTime格式有误，正确格式：20170526153733; ")
             else:
@@ -570,14 +587,15 @@ def dekun():
                 policymodel.departDateTime = departDateTimes[0:4] + "-" + departDateTimes[4:6] + "-" + departDateTimes[6:8] + " "+ departDateTimes[8:10] + ":" + departDateTimes[10:12]+ ":" + departDateTimes[12:14]
 
          # 如果对接众安，需要校验省市区三段式的有效性（参照单票投保）
-        if departProvince == "" and departCity == "" and departDistrict == "" and detailDeparture == "":
+        
+        if policymodel.departProvince == "" and departCity == "" and departDistrict == "" and detailDeparture == "":
             raise Exception("错误：起运地详细地址或省市区至少有一项不为空; ")
-        if destinationProvice == "" and destinationCity == "" and destinationDistrict == "" and detailDestination == "":
+        if PlaceOrLocationInformation[1]['PlaceProvince'] == "" and destinationCity == "" and destinationDistrict == "" and detailDestination == "":
             raise Exception("错误：目的地详细地址或省市区至少有一项不为空; ")
         maxData = "select MAX(policySolutionID) from  remotedata WHERE policyNo='" + policymodel.policyNo + "' AND appkey='" + remoteuser + "'"
-        print(maxData)
+        # print(maxData)
         dataresult = query(maxData)
-        print(len(dataresult))
+        # print(len(dataresult))
         if len(dataresult) == 0:
             newPolicyNo = policymodel.policyNo + "00000001"
         else:
@@ -598,7 +616,8 @@ def dekun():
     except Exception as err:
         result = {}
         result['responsecode'] = '0'
-        print(err)
+        # print(err)
+        traceback.print_exc()
         result['responsemessage'] = str(err)
         result['applicationserial'] = ''
         resultReturn = json.dumps(result)
@@ -950,6 +969,7 @@ def model_to_dict(result):
     except BaseException as e:
         print(e.args)
         raise TypeError('Type error of parameter')
+
 
 
 # 调试开关
