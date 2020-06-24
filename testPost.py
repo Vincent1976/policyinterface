@@ -1,7 +1,9 @@
 import json
-import pymssql #引入pymssql模块
+import pymssql
 import requests
 import traceback
+
+
 
 try:
     # 打开数据库连接
@@ -10,9 +12,8 @@ try:
     # if conn:
     #     print("连接成功!")
     cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-    sql = "select top 1 * from RemoteData order by CreateDate desc"   
+    sql = "select top 10000 * from RemoteData order by CreateDate desc"   
     # sql = "select  * from RemoteData where guid = 'ab5e60e0-f245-4ddb-9187-50bcfd23ebc9'"
-
     cursor.execute(sql)   #执行sql语句
     data = cursor.fetchall()  #读取查询结果
     cursor.close()
@@ -137,14 +138,12 @@ try:
 
         PlaceOrLocationInformation={}
         PartyInformation["SequenceCode"]=row[10]
-        # PartyInformation["SequenceCode"]="777777"  
         PartyInformation["shipId"]=row[14]
         PartyInformation["departCity"]=row[29]
         PartyInformation["destinationDistrict"]=row[33]
         PartyInformation["cargocount"]=row[37] 
         PartyInformation["cargoWeight"]=row[38] 
-
- 
+        PartyInformation["status"]=row[52] 
  
         PartyInformation["InsuranceBillCode"]=row[41]
         PartyInformation["PartyInformation"]=list
@@ -153,16 +152,17 @@ try:
         PartyInformation["TransportInformation"] = list3
 
         Json = "data=xxx||"+ json.dumps(PartyInformation)
-        print (Json)
+        # print (Json)
 
     #post接口请求
-        url="http://127.0.0.1:5000/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
+        # url="http://127.0.0.1:5000/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
+        url="http://124.70.184.203:8002/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
         data = Json
         headers = {
             'Content-Type': "application/json",
         }
         response = requests.request("POST", url, data=data, headers=headers)
-        # print(response)
+        print(response.text)
 except Exception as err:
     traceback.print_exc()
     print("请求失败",err) 

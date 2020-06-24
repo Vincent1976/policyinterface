@@ -27,6 +27,7 @@ import time
 import pymysql
 
 
+
 # 创建flask对象
 app = Flask(__name__)
 appowner = 'Draginins'  # 软件所有者
@@ -72,7 +73,7 @@ def sendpolicy():
      # 保存客户运单
         policymodel.guid = str(uuid.uuid1())
         policymodel.channelOrderId = postdata['sequencecode']
-        policymodel.Status = '等待投保'
+        policymodel.Status = postdata["status"]
         policymodel.CreateDate = datetime.datetime.now()
         # policymodel.channelOrderId = newPolicyNo
         # policymodel.systemOrderId = policymodel['sequencecode']
@@ -376,11 +377,14 @@ def sendpolicy():
 # 德坤接口
 @app.route('/dekun', methods = ['POST'])
 def dekun(): 
+    postdata=""
     try:
         remoteuser = request.values['remoteuser'] # 接收传参
         # print(remoteuser)
         datatext = request.data.decode('utf-8') # 接收文本并解决中文乱码
         postdata = json.loads(datatext[10:]) # 截取文本并转json
+
+        print(postdata)
         policymodel = policy_model.remotedata()
         # print("json数据",postdata)
         policymodel = policy_model.remotedata()
@@ -427,8 +431,6 @@ def dekun():
         policymodel.cargoWeight = postdata['cargoWeight']
 
         dragoninsProductCode =  ChargeInformation[0]['InsuranceCoverageCode'] #龙琨产品编号
-
-
 
         # remoteuser 判断
         if remoteuser !="8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D":
@@ -517,8 +519,6 @@ def dekun():
                 raise Exception("货物类型大类(CargoTypeClassification1)与龙琨产品定义不一致")
             if policymodel.trafficType != _TransportModeCode:
                 raise Exception("运输方式编码(TransportModeCode)与龙琨产品定义不一致")
-     
-
 
         if PlaceOrLocationInformation[0]['PlaceLocationQualifier'] == "5":
             detailDeparture = policymodel.transitSpot # 出发地详细地址
@@ -561,19 +561,19 @@ def dekun():
 
         if policymodel.trafficType == "" or policymodel.trafficType.lower() == "null":
             raise Exception("错误：TransportModeCode必须传递且不能为空; ")
-        else:
-            if policymodel.trafficType == "1":
-                policymodel.trafficType = "水运"
-            elif policymodel.trafficType == "2":
-                policymodel.trafficType = "铁路"
-            elif policymodel.trafficType == "3":
-                policymodel.trafficType = "汽运"
-            elif policymodel.trafficType == "4":
-                policymodel.trafficType = "空运"
-            elif policymodel.trafficType == "8":
-                policymodel.trafficType = "水运"
-            else:
-                raise Exception("错误：TransportModeCode无法识别; ")
+        # else:
+        #     if policymodel.trafficType == "1":
+        #         policymodel.trafficType = "水运"
+        #     elif policymodel.trafficType == "2":
+        #         policymodel.trafficType = "铁路"
+        #     elif policymodel.trafficType == "3":
+        #         policymodel.trafficType = "汽运"
+        #     elif policymodel.trafficType == "4":
+        #         policymodel.trafficType = "空运"
+        #     elif policymodel.trafficType == "8":
+        #         policymodel.trafficType = "水运"
+        #     else:
+        #         raise Exception("错误：TransportModeCode无法识别; ")
         if policymodel.departDateTime == "" or policymodel.departDateTime.lower() == "null":
             raise Exception("错误：InsureDateTime必须传递且不能为空; ")
         else:
@@ -619,8 +619,10 @@ def dekun():
         result['responsemessage'] = str(err)
         result['applicationserial'] = ''
         resultReturn = json.dumps(result)
+        # 发送报错邮件
+        # sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','德坤投递出错','客户原始报文:'+str(err)+str(postdata))
+        sendAlertMail('manman.zhang@dragonins.com','德坤投递出错',str(err)+ '<br />' +str(postdata))
         return json.loads(resultReturn)
-
 
 # 注销接口
 @app.route('/cancelpolicy/<appkey>/<billno>', methods=['GET'])
@@ -936,8 +938,9 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
     sender = 'policy@dragonins.com'
     receivers = [mailaddr]  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
     # 三个参数：第一个为文本内容，第二个 plain 设置文本格式，第三个 utf-8 设置编码
-    message = MIMEText(mailcontent, 'plain', 'utf-8')
+    message = MIMEText(mailcontent, 'html', 'utf-8')
     message['Subject'] = Header(mailtitle, 'utf-8')
+
     try:
         mail_host = 'smtp.exmail.qq.com'  # 设置服务器
         mail_user = 'policy@dragonins.com'    # 用户名
@@ -975,3 +978,4 @@ def model_to_dict(result):
 # 运行
 if(__name__ == '__main__'):
     app.run(host='0.0.0.0', port=5000, debug=True)
+
