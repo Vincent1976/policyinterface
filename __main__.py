@@ -25,6 +25,7 @@ import decimal
 import logging
 import time
 import pymysql
+import double
 
 
 
@@ -383,8 +384,6 @@ def dekun():
         # print(remoteuser)
         datatext = request.data.decode('utf-8') # 接收文本并解决中文乱码
         postdata = json.loads(datatext[10:]) # 截取文本并转json
-
-        print(postdata)
         policymodel = policy_model.remotedata()
         # print("json数据",postdata)
         policymodel = policy_model.remotedata()
@@ -510,7 +509,7 @@ def dekun():
         if ChargeInformation[0]['deductible'] != _deductible:
             raise Exception("免赔额(deductible)与龙琨产品定义不一致")
         # 客户保额*费率=客户保费   客户保费>=龙琨最低保费（倒算规则要给客户）
-        if (str(custpremium)) != 0.01:
+        if (double.double(custpremium)) != 0.01:
             if decimal.Decimal(round(custamount * custrate,2)) != custpremium: # round(a, 2)四舍五入保留两位小数
                 raise Exception("保额乘以费率不等于保费")
             if custpremium < decimal.Decimal(_MonetaryAmount):
@@ -622,6 +621,12 @@ def dekun():
         # 发送报错邮件
         # sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','德坤投递出错','客户原始报文:'+str(err)+str(postdata))
         sendAlertMail('manman.zhang@dragonins.com','德坤投递出错',str(err)+ '<br />' +str(postdata))
+        #写入日志
+        log_file = 'E:/policyinterface2/logs/'+datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")+'dekun.log'
+        log_format = '%(message)s'
+        logging.basicConfig(filename=log_file, level=logging.WARNING, format=log_format)
+        logger = logging.getLogger()
+        logger.warning(str(postdata))
         return json.loads(resultReturn)
 
 # 注销接口
