@@ -25,7 +25,6 @@ import decimal
 import logging
 import time
 import pymysql
-import double
 
 
 
@@ -509,7 +508,7 @@ def dekun():
         if ChargeInformation[0]['deductible'] != _deductible:
             raise Exception("免赔额(deductible)与龙琨产品定义不一致")
         # 客户保额*费率=客户保费   客户保费>=龙琨最低保费（倒算规则要给客户）
-        if (double.double(custpremium)) != 0.01:
+        if (decimal.Decimal(custpremium)) != 0.01:
             if decimal.Decimal(round(custamount * custrate,2)) != custpremium: # round(a, 2)四舍五入保留两位小数
                 raise Exception("保额乘以费率不等于保费")
             if custpremium < decimal.Decimal(_MonetaryAmount):
