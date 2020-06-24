@@ -24,8 +24,6 @@ from models import ValidInsured_model
 import decimal
 import logging
 import time
-import pymssql #引入pymssql模块
-import requests
 import pymysql
 
 
@@ -517,8 +515,8 @@ def dekun():
                 raise Exception("保费(MonetaryAmount)不能低于最低保费")
             if policymodel.cargoType != _CargoTypeClassification1:
                 raise Exception("货物类型大类(CargoTypeClassification1)与龙琨产品定义不一致")
-            # if policymodel.trafficType != _TransportModeCode:
-            #     raise Exception("运输方式编码(TransportModeCode)与龙琨产品定义不一致")
+            if policymodel.trafficType != _TransportModeCode:
+                raise Exception("运输方式编码(TransportModeCode)与龙琨产品定义不一致")
      
 
 
