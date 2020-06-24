@@ -612,7 +612,7 @@ def dekun():
         return json.loads(resultReturn)
     except Exception as err:
         result = {}
-        result['responsecode'] = '0'
+        result['responsecode'] = '0' 
         # print(err)
         traceback.print_exc()
         result['responsemessage'] = str(err)
