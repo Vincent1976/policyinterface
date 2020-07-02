@@ -1143,6 +1143,12 @@ def postInsurer_HT(guid):
                             </Insured>
                         </Policy>"""
 
+        m = hashlib.md5()
+        b = (key + postXML).encode(encoding='utf-8')
+        m.update(b)
+        signmd5 = m.hexdigest()
+        result = client.service.IMPPolicy(postXML, usr, pwd, signmd5.upper())
+
         #写入日志
         log_file = open('logs/' + guid +'_jmpolicy.log',mode='a')
         log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
@@ -1151,15 +1157,10 @@ def postInsurer_HT(guid):
         log_file.write("key:" + key + '\n')
         log_file.write("url:" + url + '\n')
         log_file.write(postXML + '\n')
+        log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(result))
         log_file.close()
 
-        m = hashlib.md5()
-        b = (key + postXML).encode(encoding='utf-8')
-        m.update(b)
-        signmd5 = m.hexdigest()
-
-        result = client.service.IMPPolicy(postXML, usr, pwd, signmd5.upper())
-        print(result)
         return result
     except Exception as err:
         traceback.print_exc()
