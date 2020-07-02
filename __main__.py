@@ -388,7 +388,7 @@ def dekun():
         policymodel = policy_model.remotedata()
         policymodel.guid = str(uuid.uuid1())
         policymodel.channelOrderId = postdata['SequenceCode']
-        policymodel.Status = '等待投保'
+        policymodel.Status = postdata['status']
         policymodel.CreateDate = datetime.datetime.now()
         policymodel.policyNo = postdata['InsuranceBillCode'] # 大保单号
         policymodel.shipId = postdata['shipId']
@@ -623,9 +623,10 @@ def dekun():
         #写入日志
         log_file = 'E:/policyinterface2/logs/'+datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")+'dekun.log'
         log_format = '%(message)s'
-        logging.basicConfig(filename=log_file, level=logging.WARNING, format=log_format)
+        logging.basicConfig(filename=log_file,format=log_format)
         logger = logging.getLogger()
-        logger.warning(str(postdata))
+        logger.warning(str(err) + str(postdata))
+
         return json.loads(resultReturn)
 
 # 注销接口
