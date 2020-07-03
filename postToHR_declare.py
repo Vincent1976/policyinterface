@@ -163,6 +163,14 @@ try:
         result["agreementObject"] = agreementObject
         result["productDiffObject"] = productDiffObject
         Json = "data=xxx||"+ json.dumps(result)
+
+        #写入日志
+        log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a')
+        log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(Json))
+        log_file.close()
+
         print(Json)
 
 except Exception as err:
