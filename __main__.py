@@ -571,7 +571,7 @@ def jmpolicy():
         result['responsemessage'] = _Msg
         result['applicationserial'] = newguid
         result['appkey'] = policymodel.appkey
-        result['sequencecode'] = newguid
+        result['sequencecode'] = policymodel.channelOrderId
         result['premium'] = policymodel.insuranceFee
         result['policyno'] = _InsurancePolicy
         result['downloadurl'] = _PdfURL
