@@ -562,12 +562,19 @@ def jmpolicy():
         policymodel.save()
 
         # 投递保险公司 或 龙琨编号
-        policyresult = postInsurer_HT(newguid)       
+        _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
 
+        if _Flag == "1":
+            _Msg = "投保成功"
         result = {}
-        result['responsecode'] = '1'
-        result['responsemessage'] = '投保成功'
-        result['applicationserial'] = '投保成功'
+        result['responsecode'] = _Flag
+        result['responsemessage'] = _Msg
+        result['applicationserial'] = newguid
+        result['appkey'] = policymodel.appkey
+        result['sequencecode'] = policymodel.channelOrderId
+        result['premium'] = policymodel.insuranceFee
+        result['policyno'] = _InsurancePolicy
+        result['downloadurl'] = _PdfURL
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
 
@@ -895,10 +902,6 @@ def getpolicy(appkey, billno):
         result = json.dumps(searchResult)
         return json.loads(result)
 
-# 洪仟测试
-@app.route('/postInsurer_HT/<guid>/<appkey>', methods=['GET'])
-def getpolicyTest(guid, appkey):
-    return postInsurer_HT(guid, appkey)
 
 # 投递保险公司(华泰)
 def postInsurer_HT(guid):
@@ -907,6 +910,7 @@ def postInsurer_HT(guid):
     from models import ValidInsured_model
     from models import jm_ht_policy_model as policy_model
     from models import GJXXPT_Product_model
+    from dals import dal
     try:
         #region 读取等待投保数据
         remotedata = policy_model.jm_ht_remotedata.query.filter(policy_model.jm_ht_remotedata.guid==guid).all()
@@ -988,10 +992,12 @@ def postInsurer_HT(guid):
         trailerNum="" #挂车车牌号
         payAddr="" #赔款偿付地
 
-        ######险种信息InsureRdr
-        rdrCde="SX300211" #编码 (国内)
-        rdrName="基本险" #名称 (国内)
-        rdrDesc="国内水路、陆路货物运输保险基本险" #描述
+        ######险种信息InsureRdr，获取
+        rdrCde=GJXXPTProduct[0]['InsuranceCode'] #编码 (国内)
+        rdrName=GJXXPTProduct[0]['InsuranceCoverageName'] #名称 (国内)
+        rdrDesc=GJXXPTProduct[0]['Remark'] #描述
+
+        # 附加盗抢险，不进行配置，写死在程序里
         rdrCde1="SX400069" #编码 (国内)
         rdrName1="盗抢险条款" #名称 (国内)
         rdrDesc1="盗抢险条款" #描述
@@ -1162,7 +1168,39 @@ def postInsurer_HT(guid):
         log_file.write(str(result))
         log_file.close()
 
-        return result
+        from xml.dom.minidom import parse
+        import xml.dom.minidom
+        DOMTree = xml.dom.minidom.parseString(str(result))
+        resultNode = DOMTree.documentElement
+
+        _Msg = ""
+        _SerialNumber = ""
+        _InsurancePolicy = ""
+        _PdfURL = ""
+        _Status = ""
+        
+        _Flag = resultNode.getElementsByTagName("Flag")[0].childNodes[0].data
+        if _Flag == "2": # 人工核保
+            _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
+            _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
+            _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
+            _Status = "人工核保"
+        elif _Flag == "1": # 核保通过
+            _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
+            _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
+            _PdfURL = resultNode.getElementsByTagName("PdfURL")[0].childNodes[0].data    
+            _Status = "投保成功"
+        else: # 投保失败
+            _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
+            _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
+            _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
+            _PdfURL = resultNode.getElementsByTagName("PdfURL")[0].childNodes[0].data
+            _Status = "投保失败"
+
+        # 回写投保表
+        sql = "UPDATE jm_ht_remotedata SET Status='%s', errLog='%s', policySolutionID='%s', relationType='%s' WHERE guid='%s'" %(_Status, _Msg, _InsurancePolicy, _PdfURL, guid)
+        dal.SQLHelper.update(sql,None)
+        return _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag
     except Exception as err:
         traceback.print_exc()
         return str(err)
