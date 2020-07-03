@@ -17,7 +17,7 @@ try:
     conn.close()
     # 打？不懂
     for row in data: 
-        result={}
+        postdata={}
 
         channelObject = {}
         channelObject["bizCode"]= '121' # ?
@@ -154,24 +154,28 @@ try:
         productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
 
 
-        result["channelObject"] = channelObject
-        result["insuranceObject"] = insuranceObject
-        result["appntObject"] = appntObject
+        postdata["channelObject"] = channelObject
+        postdata["insuranceObject"] = insuranceObject
+        postdata["appntObject"] = appntObject
         # result["insuredObject"] = [insuredObject,insuredObject1]
-        result["insuredObject"] = [insuredObject]
-        result["definedSafeObj"] = definedSafeObj
-        result["agreementObject"] = agreementObject
-        result["productDiffObject"] = productDiffObject
-        Json = "data=xxx||"+ json.dumps(result)
+        postdata["insuredObject"] = [insuredObject]
+        postdata["definedSafeObj"] = definedSafeObj
+        postdata["agreementObject"] = agreementObject
+        postdata["productDiffObject"] = productDiffObject
+        Json = json.dumps(postdata)
 
         #写入日志
         log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a')
-        log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        # log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
         log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
         log_file.write(str(Json))
         log_file.close()
 
-        print(Json)
+
+
+
+    
+        
 
 except Exception as err:
     traceback.print_exc()
