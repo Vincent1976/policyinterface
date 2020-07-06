@@ -381,7 +381,7 @@ def jmpolicy():
         policymodel.guid = newguid        
         # 头部信息
         policymodel.appkey = postdata['appkey']     
-        cust_appkey = = postdata['appkey']
+        cust_appkey = postdata['appkey']
         policymodel.bizContent = postdata['usercode']
         policymodel.channelOrderId = postdata['sequencecode']
         cust_sequencecode = postdata['sequencecode']
