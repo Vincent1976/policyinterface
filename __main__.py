@@ -1054,6 +1054,9 @@ def postInsurer_HT(guid):
             url = "" # 生产地址
             key = "" # 生产key
 
+        if url == "":
+            raise Exception("投保系统尚未开通")
+
         client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
         postXML = """<?xml version='1.0' encoding='utf-8'?>
                         <Policy>
@@ -1203,7 +1206,7 @@ def postInsurer_HT(guid):
         return _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag
     except Exception as err:
         traceback.print_exc()
-        return str(err)
+        return "投保失败", "", "", str(err), "0"
 
 
 # 发送注册验证邮件
