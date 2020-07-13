@@ -361,6 +361,8 @@ def sendpolicy():
 # 投保接口 (聚盟)
 @app.route('/jmpolicy', methods=['POST'])
 def jmpolicy():
+    cust_sequencecode = ''
+    cust_appkey = ''
     from models import jm_ht_policy_model as policy_model
     from models import GJXXPT_Product_model
     from dals import dal
@@ -378,9 +380,11 @@ def jmpolicy():
         # 保存客户运单
         policymodel.guid = newguid        
         # 头部信息
-        policymodel.appkey = postdata['appkey']            
+        policymodel.appkey = postdata['appkey']     
+        cust_appkey = postdata['appkey']
         policymodel.bizContent = postdata['usercode']
         policymodel.channelOrderId = postdata['sequencecode']
+        cust_sequencecode = postdata['sequencecode']
         policymodel.policyNo = postdata['solutionid']
         policymodel.claimLimit = postdata['productid']
         action = postdata['action']  
@@ -584,6 +588,11 @@ def jmpolicy():
         result['responsecode'] = '0'
         result['responsemessage'] = str(err)
         result['applicationserial'] = ''
+        result['appkey'] = cust_appkey
+        result['sequencecode'] = cust_sequencecode
+        result['premium'] = ''
+        result['policyno'] = ''
+        result['downloadurl'] = ''
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
 
@@ -1054,6 +1063,9 @@ def postInsurer_HT(guid):
             url = "" # 生产地址
             key = "" # 生产key
 
+        if url == "":
+            raise Exception("投保系统尚未开通")
+
         client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
         postXML = """<?xml version='1.0' encoding='utf-8'?>
                         <Policy>
@@ -1203,7 +1215,7 @@ def postInsurer_HT(guid):
         return _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag
     except Exception as err:
         traceback.print_exc()
-        return str(err)
+        return "投保失败", "", "", str(err), "0"
 
 
 # 发送注册验证邮件
