@@ -152,8 +152,8 @@ try:
         # print (Json)
 
     #post接口请求
-        url="http://127.0.0.1:5000/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
-        # url="http://124.70.184.203:8002/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
+        # url="http://127.0.0.1:5000/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
+        url="http://124.70.184.203:8002/dekun?remoteuser=8CB22A57-50E6-4B4C-9F65-BA45B5D56F9D"
         data = Json
         headers = {
             'Content-Type': "application/json",
