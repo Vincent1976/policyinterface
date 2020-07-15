@@ -34,7 +34,89 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
         print('邮件发送成功')
     except smtplib.SMTPException:
         print('Error: 无法发送邮件')
+# 华泰出单接口
+def issueInterface(_proposalNo,guid):
+    try:
+        issuedata={}
+        insureObject = {} # 投保信息
+        insureObject["bizCode"]= '122' # 交易类型
+        insureObject["proposalNo"]= _proposalNo # 投保单号
+        insureObject["createTime"]= (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M:%S") # 请求时间
 
+        payObject = {} # 支付信息
+        payObject["isSinglePay"] = '1' # 是否逐单支付
+        payObject["payMode"] = '' # 支付类型
+        payObject["payDate"] = '' # 支付时间
+        payObject["payBankNo"] = '' # 支付流水号
+                
+        issuedata["insureObject"] = insureObject
+        issuedata["payObject"] = payObject
+        issueJson = json.dumps(issuedata)
+
+        key1 = "1qaz2wsx" # 线下提供的密钥
+        m1 = hashlib.md5()
+        b1 = (key1 + issueJson).encode(encoding='utf-8')
+        m1.update(b1)
+        issuemd5 = m1.hexdigest()
+                
+        #post出单接口请求
+        url="http://219.141.242.74:9039/service_platform/GeneralInsureInterface"
+        # 通过字典方式定义请求body
+        FormData = {"json": str(issueJson), "channelCode": str(channelObject["channelCode"]), "signature": str(issuemd5)}
+        data = parse.urlencode(FormData)
+        headers = {
+            'Content-Type': "application/x-www-form-urlencoded",
+        }
+        # 请求方式
+        content = requests.post(url=url, headers=headers, data=data).text
+        content = json.loads(content)
+
+        _bizCode1 = ""
+        _channelCode1 = ""
+        _orderId1 = ""
+        _policyNO1 = ""
+        _policyURL1 = ""
+        _responseInfo1 = ""
+        _totalPremium1 = ""
+        _responseCode1 = content['responseCode'] # 接收返回的参数
+        error = '报错信息：' + str(content)
+
+        if _responseCode1 == "1":
+            _bizCode1 = content['bizCode'] 
+            _channelCode1 = content['channelCode'] 
+            _policyNO1 = content['policyNO'] 
+            _policyURL1 = content['policyURL'] 
+            _orderId1 = content['orderId'] 
+            _responseInfo1 = content['responseInfo'] 
+            _totalPremium1 = content['totalPremium']
+            _Status1 = "已出单" 
+        elif _responseCode1 == "0":
+            _bizCode1 = content['bizCode'] 
+            _channelCode1 = content['channelCode'] 
+            _policyNO1 = content['policyNO'] 
+            _policyURL1 = content['policyURL'] 
+            _orderId1 = content['orderId'] 
+            _responseInfo1 = content['responseInfo'] 
+            _totalPremium1 = content['totalPremium']
+            _Status1 = "出单失败"
+            sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
+        else:
+            _bizCode1 = content['bizCode'] 
+            _channelCode1 = content['channelCode'] 
+            _policyNO1 = content['policyNO'] 
+            _policyURL1 = content['policyURL'] 
+            _orderId1 = content['orderId'] 
+            _responseInfo1 = content['responseInfo'] 
+            _totalPremium1 = content['totalPremium']
+            sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
+
+        # 第二次回写remotedata投保表
+        sql = "UPDATE remotedata SET relationType='%s', Status='%s',deliveryOrderId = '%s',errlog = '%s'  WHERE guid='%s'" %(_policyURL1, _Status1, _proposalNo,_responseInfo1, guid)
+        dal.SQLHelper.update(sql,None)
+    except Exception as err:
+        traceback.print_exc()
+        print("请求失败",err) 
+            
 try:
     # 打开数据库连接
     conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
@@ -209,11 +291,11 @@ try:
         parameter = 'json=' + str(Json) + '&channelCode='+ str(channelObject["channelCode"]) + '&signature=' + str(signmd5)
 
         #写入日志
-        # log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a')
-        # log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
-        # log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
-        # log_file.write(str(Json))
-        # log_file.close()
+        log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a')
+        log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(Json))
+        log_file.close()
         
         #post接口请求
         url="http://219.141.242.74:9039/service_platform/GeneralUnderInterface"
@@ -226,8 +308,7 @@ try:
         # 请求方式
         content = requests.post(url=url, headers=headers, data=data).text
         content = json.loads(content)
-        print(content)
-
+        # print(content)
         _bizCode = ""
         _channelCode = ""
         _orderId = ""
@@ -235,7 +316,7 @@ try:
         _proposalNo = ""
         _Status = ""
         _responseCode = content['responseCode'] # 接收返回的参数
-        print(_responseCode)
+
         guid = 'guid：'+guid
         error = '报错信息：' + str(content)
         if _responseCode == "2": # 人工核保
@@ -246,8 +327,6 @@ try:
             _proposalNo = content['proposalNo']
             _Status = "人工核保" 
             sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
-
-
         elif _responseCode == "1": # 核保通过
             _bizCode = content['bizCode'] 
             _channelCode = content['channelCode'] 
@@ -262,91 +341,14 @@ try:
             _responseInfo = content['responseInfo'] 
             _proposalNo = content['proposalNo']
             _Status = "投保失败" 
-            sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
-       
-            # 第一次回写remotedata投保表
-            sql = "UPDATE remotedata SET Status='%s', errLog='%s',bizContent = '%s',shipid = '%s' WHERE guid='%s'" %(_Status, _responseInfo,_proposalNo, _orderId, guid)
-            dal.SQLHelper.update(sql,None)
+            issueInterface(_proposalNo,guid)
 
-        issuedata={}
-        insureObject = {} # 投保信息
-        insureObject["bizCode"]= '122' # 交易类型
-        insureObject["proposalNo"]= _proposalNo # 投保单号
-        insureObject["createTime"]= (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M:%S") # 请求时间
+            sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error)) 
+        # 第一次回写remotedata投保表
+        sql = "UPDATE remotedata SET Status='%s', errLog='%s',bizContent = '%s',custid = '%s' WHERE guid='%s'" %(_Status, _responseInfo,_proposalNo, _orderId, guid)
+        dal.SQLHelper.update(sql,None)
 
-        payObject = {} # 支付信息
-        payObject["isSinglePay"] = '1' # 是否逐单支付
-        payObject["payMode"] = '' # 支付类型
-        payObject["payDate"] = '' # 支付时间
-        payObject["payBankNo"] = '' # 支付流水号
-             
-        issuedata["insureObject"] = insureObject
-        issuedata["payObject"] = payObject
-        issueJson = json.dumps(issuedata)
-
-        key1 = "1qaz2wsx" # 线下提供的密钥
-        m1 = hashlib.md5()
-        b1 = (key1 + issueJson).encode(encoding='utf-8')
-        m1.update(b1)
-        issuemd5 = m1.hexdigest()
-            
-        #post出单接口请求
-        url="http://219.141.242.74:9039/service_platform/GeneralInsureInterface"
-        # 通过字典方式定义请求body
-        FormData = {"json": str(issueJson), "channelCode": str(channelObject["channelCode"]), "signature": str(issuemd5)}
-        data = parse.urlencode(FormData)
-        headers = {
-            'Content-Type': "application/x-www-form-urlencoded",
-        }
-        # 请求方式
-        content = requests.post(url=url, headers=headers, data=data).text
-        content = json.loads(content)
-        # print(content)
-
-        _bizCode1 = ""
-        _channelCode1 = ""
-        _orderId1 = ""
-        _policyNO1 = ""
-        _policyURL1 = ""
-        _responseInfo1 = ""
-        _totalPremium1 = ""
-
-        _responseCode1 = content['responseCode'] # 接收返回的参数
-        if _responseCode1 == "1":
-            _bizCode1 = content['bizCode'] 
-            _channelCode1 = content['channelCode'] 
-            _policyNO1 = content['policyNO'] 
-            _policyURL1 = content['policyURL'] 
-            _orderId1 = content['orderId'] 
-            _responseInfo1 = content['responseInfo'] 
-            _totalPremium1 = content['totalPremium']
-            _Status1 = "已出单" 
-        elif _responseCode1 == "0":
-            _bizCode1 = content['bizCode'] 
-            _channelCode1 = content['channelCode'] 
-            _policyNO1 = content['policyNO'] 
-            _policyURL1 = content['policyURL'] 
-            _orderId1 = content['orderId'] 
-            _responseInfo1 = content['responseInfo'] 
-            _totalPremium1 = content['totalPremium']
-            _Status1 = "出单失败"
-            sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
-        else:
-            _bizCode1 = content['bizCode'] 
-            _channelCode1 = content['channelCode'] 
-            _policyNO1 = content['policyNO'] 
-            _policyURL1 = content['policyURL'] 
-            _orderId1 = content['orderId'] 
-            _responseInfo1 = content['responseInfo'] 
-            _totalPremium1 = content['totalPremium']
-            sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
-
-        # 第二次回写remotedata投保表
-        issuesql = "UPDATE remotedata SET relationType='%s', Status='%s',policySolutionID = '%s',errlog = '%s'  WHERE guid='%s'" %(_policyURL1, _Status1, _proposalNo,_responseInfo1, guid)
-        # dal.SQLHelper.update(sql,None)
-            
 except Exception as err:
     traceback.print_exc()
     print("请求失败",err) 
-
 
