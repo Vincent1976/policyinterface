@@ -366,6 +366,8 @@ def jmpolicy():
     from models import jm_ht_policy_model as policy_model
     from models import GJXXPT_Product_model
     from dals import dal
+    from models import ValidInsured_model
+
     try:
         # 获取请求 
         postdata = json.loads(request.get_data(as_text=True))
@@ -429,6 +431,11 @@ def jmpolicy():
         policymodel.mpAmount = postdata['weightunit']
         policymodel.volume = postdata['volume']
         policymodel.mpRate = postdata['volumeunit']
+
+        ValidInsured = ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==policymodel.appkey,ValidInsured_model.ValidInsured.ValidInsuredName==policymodel.custCoName).all()
+        ValidInsured = model_to_dict(ValidInsured)
+        if len(ValidInsured)==0 :
+            raise Exception('开票信息配置信息不存在，投保失败')
         #必填项校验
         exMessage = ''
         
@@ -926,6 +933,7 @@ def postInsurer_HT(guid):
         remotedata = model_to_dict(remotedata)
         appkey = remotedata[0]['appkey']
         productNo = remotedata[0]['claimLimit']
+        custCoName = remotedata[0]['custCoName'] 
         ######公共信息General
         issueTime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "T") #出单时间
         insurancePolicy = "" #保单号
@@ -1027,7 +1035,7 @@ def postInsurer_HT(guid):
         accountBank="" #开户银行 
         accountNumber="" #银行账号
         if taxDeduct=="1":
-            ValidInsured=ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==appkey).all()
+            ValidInsured=ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==appkey,ValidInsured_model.ValidInsured.ValidInsuredName==custCoName).all()
             ValidInsured = model_to_dict(ValidInsured)
             if len(ValidInsured)==0 :
                 raise Exception('开票信息配置信息不存在，投保失败')

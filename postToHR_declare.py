@@ -116,7 +116,7 @@ def issueInterface(_proposalNo,guid):
         dal.SQLHelper.update(sql,None)
     except Exception as err:
         traceback.print_exc()
-        # print("请求失败",err)
+        print("请求失败",err)
         sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
  
             
@@ -311,7 +311,7 @@ try:
         # 请求方式
         content = requests.post(url=url, headers=headers, data=data).text
         content = json.loads(content)
-        # print(content)
+        print(content)
         _bizCode = ""
         _channelCode = ""
         _orderId = ""
