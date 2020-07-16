@@ -116,7 +116,7 @@ def issueInterface(_proposalNo,guid):
         dal.SQLHelper.update(sql,None)
     except Exception as err:
         traceback.print_exc()
-        print("请求失败",err)
+        # print("请求失败",err)
         sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
  
             
@@ -335,7 +335,7 @@ try:
             _channelCode = content['channelCode'] 
             _orderId = content['orderId'] 
             _responseInfo = content['responseInfo'] 
-            _proposalNo = content['proposalNo']
+            _proposalNo = content['proposalNo'] 
             _Status = "投保成功" 
             issueInterface(_proposalNo,guid)
         else: # 投保失败
