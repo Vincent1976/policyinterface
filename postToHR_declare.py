@@ -311,7 +311,7 @@ try:
         # 请求方式
         content = requests.post(url=url, headers=headers, data=data).text
         content = json.loads(content)
-        print(content)
+        # print(content)
         _bizCode = ""
         _channelCode = ""
         _orderId = ""
