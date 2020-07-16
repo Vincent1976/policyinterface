@@ -34,6 +34,7 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
         print('邮件发送成功')
     except smtplib.SMTPException:
         print('Error: 无法发送邮件')
+
 # 华泰出单接口
 def issueInterface(_proposalNo,guid):
     try:
@@ -115,7 +116,9 @@ def issueInterface(_proposalNo,guid):
         dal.SQLHelper.update(sql,None)
     except Exception as err:
         traceback.print_exc()
-        print("请求失败",err) 
+        print("请求失败",err)
+        sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
+ 
             
 try:
     # 打开数据库连接
@@ -288,7 +291,7 @@ try:
         b = (key + Json).encode(encoding='utf-8')
         m.update(b)
         signmd5 = m.hexdigest()
-        parameter = 'json=' + str(Json) + '&channelCode='+ str(channelObject["channelCode"]) + '&signature=' + str(signmd5)
+        # parameter = 'json=' + str(Json) + '&channelCode='+ str(channelObject["channelCode"]) + '&signature=' + str(signmd5)
 
         #写入日志
         log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a')
@@ -334,6 +337,7 @@ try:
             _responseInfo = content['responseInfo'] 
             _proposalNo = content['proposalNo']
             _Status = "投保成功" 
+            issueInterface(_proposalNo,guid)
         else: # 投保失败
             _bizCode = content['bizCode'] 
             _channelCode = content['channelCode'] 
@@ -341,8 +345,6 @@ try:
             _responseInfo = content['responseInfo'] 
             _proposalNo = content['proposalNo']
             _Status = "投保失败" 
-            issueInterface(_proposalNo,guid)
-
             sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error)) 
         # 第一次回写remotedata投保表
         sql = "UPDATE remotedata SET Status='%s', errLog='%s',bizContent = '%s',custid = '%s' WHERE guid='%s'" %(_Status, _responseInfo,_proposalNo, _orderId, guid)
@@ -350,5 +352,8 @@ try:
 
 except Exception as err:
     traceback.print_exc()
-    print("请求失败",err) 
+    # print("请求失败",err) 
+    sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
+
+
 
