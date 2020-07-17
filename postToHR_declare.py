@@ -1,4 +1,4 @@
-import json
+﻿import json
 import pymssql
 import requests
 import traceback
@@ -54,9 +54,9 @@ def issueInterface(_proposalNo,guid):
         issuedata["payObject"] = payObject
         issueJson = json.dumps(issuedata)
 
-        key1 = "1qaz2wsx" # 线下提供的密钥
+        key1 = "123456@HT" # 线下提供的密钥
         m1 = hashlib.md5()
-        b1 = (key1 + issueJson).encode(encoding='utf-8')
+        b1 = (issueJson + key1).encode(encoding='utf-8')
         m1.update(b1)
         issuemd5 = m1.hexdigest()
                 
@@ -137,13 +137,15 @@ try:
         guid = row[0] 
         channelObject = {}
         channelObject["bizCode"]= '121' # 交易类型
-        channelObject["channelCode"]='UE03009302' # 渠道编码
+        # channelObject["channelCode"]='UE03009302' # 渠道编码
+        channelObject["channelCode"]='100189' # 渠道编码
+
         channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
         channelObject["orderId"]= row[14] # 订单号 shipid
-        channelObject["createTime"]= str(datetime.datetime.now()) # 当前时间
+        channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
 
         insuranceObject = {}
-        insuranceObject["insuranceCode"] = '3622' # 险种代码
+        insuranceObject["insuranceCode"] = '362205' # 险种代码
         insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
         insuranceObject['plan'] = '综合险' # 款别
         insuranceObject['srcCPlyNo'] = '' # 不必填
@@ -162,11 +164,18 @@ try:
         appntObject = {}
         appntObject["appName"] = row[3] # 投保人姓名 custCoName
         appntObject["appType"] = '2' 
-        appntObject["appBirthday"] = '' # 不必填
+        # appntObject["appBirthday"] = '' # 不必填
         appntObject["appEmail"] = '' # 不必填
         appntObject["appGender"] = '' # 不必填
         appntObject["appIDType"] = '97' 
-        appntObject["appNumber"] = '' # 不必填
+
+        if appntObject["appName"] == '杭州钱江物流有限公司':
+            appntObject["appNumber"] = '91330102727621887N'# 被保人证件号
+        elif appntObject["appName"] == '杭州汉盛物流有限公司':
+            appntObject["appNumber"] = '91330182322907190D'# 被保人证件号
+        else:
+            appntObject["appNumber"] = '不详'# 被保人证件号
+        #appntObject["appNumber"] = '' # 不必填
         appntObject["appTelNumber"] = row[86] # 投保人电话号
         appntObject["appAddr"] = row[90]# 地址信息
         appntObject["appContact"] = row[78] # 联系人名字
@@ -178,7 +187,7 @@ try:
         insuredObject = {}
         insuredObject["insuredName"] = row[9] # 被保险人名称
         insuredObject["insuredType"] = '2' # 
-        insuredObject["insuredBirthday"] = '' # 不必填
+        # insuredObject["insuredBirthday"] = '' # 不必填
         insuredObject["insuredEmail"] = '' # 不必填
         insuredObject["InsuredGender"] = '' # 不必填
         insuredObject["insuredIDType"] = '06' # 被保人证件类型
@@ -284,21 +293,22 @@ try:
         postdata["definedSafeObj"] = definedSafeObj
         postdata["agreementObject"] = agreementObject
         postdata["productDiffObject"] = productDiffObject
-        Json = json.dumps(postdata)
-        # print(Json)
-        key = "1qaz2wsx" # 线下提供的密钥
+        Json = json.dumps(postdata, ensure_ascii=False)
+        Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
+        
+        #print(Json)
+        key = "123456@HT" # 线下提供的密钥
         m = hashlib.md5()
-        b = (key + Json).encode(encoding='utf-8')
+        b = (str(Json2) + key).encode(encoding='utf-8')
         m.update(b)
         signmd5 = m.hexdigest()
-        # parameter = 'json=' + str(Json) + '&channelCode='+ str(channelObject["channelCode"]) + '&signature=' + str(signmd5)
 
         #写入日志
-        log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a')
+        log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a', encoding='utf-8')
         log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
-        log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        
         log_file.write(str(Json))
-        log_file.close()
+        log_file.write(signmd5)
         
         #post接口请求
         url="http://219.141.242.74:9039/service_platform/GeneralUnderInterface"
@@ -311,7 +321,10 @@ try:
         # 请求方式
         content = requests.post(url=url, headers=headers, data=data).text
         content = json.loads(content)
-        # print(content)
+        log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(content))
+        log_file.close()
+        print(content)
         _bizCode = ""
         _channelCode = ""
         _orderId = ""
@@ -352,7 +365,7 @@ try:
 
 except Exception as err:
     traceback.print_exc()
-    # print("请求失败",err) 
+    print("请求失败",err) 
     sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
 
 
