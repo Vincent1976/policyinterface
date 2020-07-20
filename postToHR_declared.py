@@ -5,7 +5,6 @@ import traceback
 import datetime
 from dateutil.relativedelta import relativedelta
 import decimal
-import config
 from dals import dal
 import hashlib
 import smtplib
@@ -45,8 +44,8 @@ def issueInterface():
         sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68'  order by CreateDate desc  "   
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
-        cursor.close()
-        conn.close()
+        # cursor.close()
+        # conn.close()
 
         for row in data: 
             postdata={}
@@ -119,10 +118,10 @@ def issueInterface():
             definedSafeObj["isDefinedSafe"] = '0' # 默认0，此节点不用传
 
             payObject = {} # 支付信息
-            payObject["isSinglePay"] = '1' # 是否逐单支付
-            payObject["payMode"] = '' # 支付类型
-            payObject["payDate"] = '' # 支付时间
-            payObject["payBankNo"] = '' # 支付流水号
+            payObject["isSinglePay"] = '0' # 是否逐单支付
+            # payObject["payMode"] = '' # 支付类型
+            # payObject["payDate"] = '' # 支付时间
+            # payObject["payBankNo"] = '' # 支付流水号
             
             agreementObject = {}
             agreementObject["policyDeductible"] = '1）针对一般事故：每一运输工具每次事故人民币5000元或损失金额的10%，以高者为准；2）针对火灾、爆炸及运输工具倾覆或追尾他车：每一运输工具每次事故人民币10000元或损失金额的20%，以高者为准。' # 免赔额/率
@@ -192,13 +191,13 @@ def issueInterface():
             _policyNO = "" # 保单号
             _policyURL = "" # 电子保单地址
             _responseCode = content['responseCode'] # 接收返回的参数
-            guid = 'guid：'+guid
+            guiderr = 'guid：'+guid
             error = '报错信息：' + str(content)
             if _responseCode == "2": # 人工核保
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error))
+                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -212,18 +211,16 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guid) + '<br />' + str(error)) 
-            # 第一次回写remotedata投保表
-            # sql = "UPDATE remotedata SET Status='%s', errLog='%s',bizContent = '%s',custid = '%s' WHERE guid='%s'" %(_Status, _responseInfo,_proposalNo, _orderId, guid)
-            # dal.SQLHelper.update(sql,None)
-
+                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
+            # 回写remotedata投保表
+            sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', custid= '"+_orderId+"',  relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
+            cursor.execute(sql) #执行sql 语句
+            conn.commit() #提交
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
         sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
-
-
-issueInterface()
+issueInterface() # 调用华泰出单接口
 
 
  
