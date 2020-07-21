@@ -40,8 +40,8 @@ def issueInterface():
     # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        # sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate desc  "   
-        sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68'  order by CreateDate desc  "   
+        sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate"   
+        
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
         # cursor.close()
@@ -125,12 +125,12 @@ def issueInterface():
             
             agreementObject = {}
             agreementObject["policyDeductible"] = '1）针对一般事故：每一运输工具每次事故人民币5000元或损失金额的10%，以高者为准；2）针对火灾、爆炸及运输工具倾覆或追尾他车：每一运输工具每次事故人民币10000元或损失金额的20%，以高者为准。' # 免赔额/率
-            agreementObject["policySpec"] =  "1）被保险人在运输过程中，由于盗窃造成货物的损失，依法应由被保险人承担赔偿责任的，保险人按本保险合同约定负责赔偿。2）对于裸装货物、二手货（旧货）、退货及返修货物，本保险仅承保基本险的风险；3）本保险不负责任何形式的仓储期间的损失，但运输过程中的临时仓储除外；4）承运车辆须具备合格驾驶证、行驶证及营运许可证，否则，保险人不负赔偿责任； 5） 保险人放弃对以下车辆的代位追偿：赣CB6506，赣CB2613，皖CA4152，皖AD3005，赣E66415，赣E43782，赣E66043，粤ACN608，粤ACY261，粤AAK050；但不放弃对任何其它第三方责任人追偿的权利；6）本保单扩展承保目的地为乌鲁木齐的货物。" # 特别约定
+            agreementObject["policySpec"] =  "1）被保险人在运输过程中，由于盗窃造成货物的损失，依法应由被保险人承担赔偿责任的，保险人按本保险合同约定负责赔偿。2）对于裸装货物、二手货（旧货）、退货及返修货物，本保险仅承保基本险的风险；3）本保险不负责任何形式的仓储期间的损失，但运输过程中的临时仓储除外；4）承运车辆须具备合格驾驶证、行驶证及营运许可证，否则，保险人不负赔偿责任； 5） 保险人放弃对以下车辆的代位追偿：赣CB6506，赣CB2613，皖CA4152，皖AD3005，赣E66415，赣E43782，赣E66043，粤ACN608，粤ACY261，粤AAK050；但不放弃对任何其它第三方责任人追偿的权利；6）本保单扩展承保目的地为乌鲁木齐的货物。7）未尽事宜以协议（MC9033622202004001）为准" # 特别约定
 
             productDiffObject = {}
 
             productDiffObject["reMark"] = '' # 默认为空
-            productDiffObject["vehicleNum"] = '*' 
+            productDiffObject["vehicleNum"] = row[14] # 运单号 shipid
             productDiffObject["vehicleModel"] = '*'
             productDiffObject["vehicleLen"] = '*'
             productDiffObject["vehicleFrameNum"] = '*' 
@@ -142,6 +142,9 @@ def issueInterface():
             productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
             productDiffObject["transDepot"] = '' # 不必填
             productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
+            productDiffObject["transDate"] = row[36] # 起运日期
+            productDiffObject["transportCost"] = row[18] # 运费
+
 
             postdata["channelObject"] = channelObject
             postdata["insuranceObject"] = insuranceObject
@@ -164,8 +167,8 @@ def issueInterface():
             #写入日志
             log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a', encoding='utf-8')
             log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
-            log_file.write(str(Json))
-            log_file.write(signmd5)
+            log_file.write(str(Json)+'\n')
+            #log_file.write(signmd5)
             
             #post出单接口请求
             url="http://219.141.242.74:9039/service_platform/InsureInterface"
@@ -220,6 +223,8 @@ def issueInterface():
         traceback.print_exc()
         print("请求失败",err) 
         sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
+
+
 issueInterface() # 调用华泰出单接口
 
 
