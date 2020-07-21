@@ -12,8 +12,6 @@ from email.header import Header
 from email.mime.text import MIMEText
 from urllib import parse
 
-
-
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
     sender = 'policy@dragonins.com'
@@ -33,15 +31,15 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
         print('邮件发送成功')
     except smtplib.SMTPException:
         print('Error: 无法发送邮件')
+
 # 华泰出单接口
 def issueInterface():
-
     try:
     # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate"   
-        
+        sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
+  
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
         # cursor.close()
@@ -60,7 +58,7 @@ def issueInterface():
             insuranceObject = {}
             insuranceObject["insuranceCode"] = '362205' # 险种代码
             insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
-            insuranceObject['plan'] = '综合险' # 款别
+            insuranceObject['plan'] = 'A' # 款别
             insuranceObject['srcCPlyNo'] = '' # 不必填
             insuranceObject['prmCur'] = '01' 
             insuranceObject['premium'] = row[21] # 保险费
@@ -224,9 +222,6 @@ def issueInterface():
         print("请求失败",err) 
         sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
 
-
 issueInterface() # 调用华泰出单接口
 
-
- 
-            
+         
