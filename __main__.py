@@ -4,7 +4,7 @@ import smtplib
 import uuid
 from email.header import Header
 from email.mime.text import MIMEText
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, send_file, send_from_directory
 import commfunc
 import config
 from database.exts import db
@@ -17,6 +17,7 @@ import decimal
 import logging
 import time
 import pymysql
+import os
 
 
 # 创建flask对象
@@ -506,7 +507,8 @@ def jmpolicy():
             exMessage += "packagequantity不能为空;"
 
         #单据唯一性
-        remotedata = policy_model.jm_ht_remotedata.query.filter(policy_model.jm_ht_remotedata.appkey==postdata['appkey'], policy_model.jm_ht_remotedata.systemOrderId==postdata['sequencecode']).order_by(policy_model.jm_ht_remotedata.CreateDate.desc()).all()
+        remotedata = policy_model.jm_ht_remotedata.query.filter(policy_model.jm_ht_remotedata.appkey==postdata['appkey'], policy_model.jm_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.jm_ht_remotedata.CreateDate.desc()).all()
+        print(remotedata)
         result = []
         dataresult = model_to_dict(remotedata)
         if postdata['action'] == "apply":
@@ -602,6 +604,16 @@ def jmpolicy():
         result['downloadurl'] = ''
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
+
+# 投保日志（聚盟）
+@app.route('/jmpolicy/log', methods=['GET'])
+def getlog_jm():
+    # 需要知道2个参数, 第1个参数是本地目录的path, 第2个参数是文件名(带扩展名)
+    directory = os.getcwd()  # 假设在当前目录
+    print(directory)
+    filename = 'uwsgi.log'
+    return send_from_directory(os.path.join(directory, 'uwsgi'), filename, as_attachment=True)
+    #return send_file('/root/wwwroot/policyinterface/uwsgi/uwsgi.log')
 
 # 投保接口 (沙师弟)
 @app.route('/ssdpolicy', methods=['POST'])
@@ -751,7 +763,7 @@ def ssdpolicy():
             exMessage += "packagequantity不能为空;"
 
         #单据唯一性
-        remotedata = policy_model.ssd_ht_remotedata.query.filter(policy_model.ssd_ht_remotedata.appkey==postdata['appkey'], policy_model.ssd_ht_remotedata.systemOrderId==postdata['sequencecode']).order_by(policy_model.ssd_ht_remotedata.CreateDate.desc()).all()
+        remotedata = policy_model.ssd_ht_remotedata.query.filter(policy_model.ssd_ht_remotedata.appkey==postdata['appkey'], policy_model.ssd_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.ssd_ht_remotedata.CreateDate.desc()).all()
         result = []
         dataresult = model_to_dict(remotedata)
         if postdata['action'] == "apply":
