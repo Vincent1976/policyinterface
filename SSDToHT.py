@@ -11,6 +11,8 @@ import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from urllib import parse
+import config
+
 
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
@@ -34,18 +36,14 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
 
 # 华泰出单接口
 def issueInterface():
+    from dals import dal
     try:
-    # 打开数据库连接
-        conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
-        cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
-        cursor.execute(sql)   #执行sql语句
-        data = cursor.fetchall()  #读取查询结果
-        # cursor.close()
-        # conn.close()
-        for row in data:
+        sql = "select * from ssd_ht_remotedata left join validinsured on ssd_ht_remotedata.appkey = validinsured.Appkey where ssd_ht_remotedata.appkey='b1a97f44d4c6d30d50c8615aae274b3e' and ssd_ht_remotedata.status = '等待投保' order by CreateDate DESC limit 1"            
+        data = dal.SQLHelper.fetch_all(sql,None)
+        
+        for row in data: 
             postdata={}
-            guid = row[0]
+            guid = row[0] 
             channelObject = {}
             channelObject["bizCode"]= '121' # 交易类型
             channelObject["channelCode"]='100189' # 渠道编码
@@ -63,8 +61,9 @@ def issueInterface():
             insuranceObject['amtCur'] = '01'
             insuranceObject['amount'] = '12000.0' 
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-            insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
+            insuranceObject['effectiveTime'] = row[36] # 保险起期 departDateTime           
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
+        
             insuranceObject['copy'] = '1' # 份数 
             insuranceObject['docType'] = '' # 不必填
             insuranceObject['docSN'] = '' # 不必填
@@ -84,13 +83,13 @@ def issueInterface():
                 appntObject["appNumber"] = '91330182322907190D'# 被保人证件号
             else:
                 appntObject["appNumber"] = '不详'# 被保人证件号
-            appntObject["appTelNumber"] = row[86] # 投保人电话号
-            appntObject["appAddr"] = row[90]# 地址信息
-            appntObject["appContact"] = row[78] # 联系人名字
+            appntObject["appTelNumber"] = row[82] # 投保人电话号
+            appntObject["appAddr"] = row[86]# 地址信息
+            appntObject["appContact"] = row[74] # 联系人名字
             appntObject["isTaxInvoice"] = '1' 
-            appntObject["taxCertifi"] = row[83] # 税务登记证号
-            appntObject["depositBank"] = row[82] # 开户银行
-            appntObject["bankAccount"] = row[81] # 银行账户
+            appntObject["taxCertifi"] = row[79] # 税务登记证号
+            appntObject["depositBank"] = row[78] # 开户银行
+            appntObject["bankAccount"] = row[77] # 银行账户
 
             insuredObject = {}
             insuredObject["insuredName"] = row[9] # 被保险人名称
@@ -115,9 +114,6 @@ def issueInterface():
 
             payObject = {} # 支付信息
             payObject["isSinglePay"] = '0' # 是否逐单支付
-            # payObject["payMode"] = '' # 支付类型
-            # payObject["payDate"] = '' # 支付时间
-            # payObject["payBankNo"] = '' # 支付流水号
             
             agreementObject = {}
             agreementObject["policyDeductible"] = '1）针对一般事故：每一运输工具每次事故人民币5000元或损失金额的10%，以高者为准；2）针对火灾、爆炸及运输工具倾覆或追尾他车：每一运输工具每次事故人民币10000元或损失金额的20%，以高者为准。' # 免赔额/率
@@ -131,7 +127,7 @@ def issueInterface():
             productDiffObject["vehicleLen"] = '*'
             productDiffObject["vehicleFrameNum"] = '*' 
             productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
-            productDiffObject["goodsType"] = 'SX001420' # 货物大类
+
             productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
             productDiffObject["goodsPack"] = '08' # 包装方式
             productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
@@ -151,7 +147,7 @@ def issueInterface():
             postdata["productDiffObject"] = productDiffObject
             Json = json.dumps(postdata, ensure_ascii=False)
             Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
-            # print(Json)          
+            print(Json)          
             key = "123456@HT" # 线下提供的密钥
             m = hashlib.md5()
             b = (str(Json2) + key).encode(encoding='utf-8')
@@ -160,7 +156,7 @@ def issueInterface():
             # print(signmd5)
 
             #写入日志
-            log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a', encoding='utf-8')
+            log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_SSDtoHT.log',mode='a', encoding='utf-8')
             log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
             log_file.write(str(Json)+'\n')
             #log_file.write(signmd5)
@@ -195,7 +191,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail('manman.zhang@dragonins.com','沙师弟-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -209,11 +205,10 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
-            # 回写remotedata投保表
-            sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', custid= '"+_orderId+"',  relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
-            cursor.execute(sql) #执行sql 语句
-            conn.commit() #提交
+                sendAlertMail('manman.zhang@dragonins.com','沙师弟-对接华泰',str(guiderr) + '<br />' + str(error)) 
+             # 回写投保表
+            # sql = "UPDATE ssd_ht_remotedata SET Status='%s', errLog='%s', bizContent='%s', custId='%s',relationType='%s' WHERE guid='%s'" %(_Status, _responseInfo, _policyNO, _orderId, _policyURL, guid)
+            # dal.SQLHelper.update(sql,None)
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
