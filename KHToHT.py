@@ -138,7 +138,7 @@ def issueInterface():
             productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
             productDiffObject["transDepot"] = '' # 不必填
             productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
-            productDiffObject["transDate"] = row[36] # 起运日期
+            productDiffObject["transDate"] = str(datetime.datetime.strptime(row[36],'%Y/%m/%d %H:%M:%S')) # 起运日期
             productDiffObject["transportCost"] = row[18] # 运费
 
 
@@ -161,7 +161,7 @@ def issueInterface():
             # print(signmd5)
 
             #写入日志
-            log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_huatai.log',mode='a', encoding='utf-8')
+            log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_KHtoHT.log',mode='a', encoding='utf-8')
             log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
             log_file.write(str(Json)+'\n')
             #log_file.write(signmd5)
@@ -196,7 +196,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail('manman.zhang@dragonins.com','卡航-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -210,7 +210,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
+                sendAlertMail('manman.zhang@dragonins.com','卡航-对接华泰',str(guiderr) + '<br />' + str(error)) 
             # # 回写remotedata投保表
             sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', custid= '"+_orderId+"',  relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
             cursor.execute(sql) #执行sql 语句
