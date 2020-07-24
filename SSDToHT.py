@@ -63,7 +63,6 @@ def issueInterface():
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
             insuranceObject['effectiveTime'] = row[36] # 保险起期 departDateTime           
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
-        
             insuranceObject['copy'] = '1' # 份数 
             insuranceObject['docType'] = '' # 不必填
             insuranceObject['docSN'] = '' # 不必填
@@ -76,7 +75,6 @@ def issueInterface():
             appntObject["appEmail"] = '' # 不必填
             appntObject["appGender"] = '' # 不必填
             appntObject["appIDType"] = '97' 
-
             if appntObject["appName"] == '杭州钱江物流有限公司':
                 appntObject["appNumber"] = '91330102727621887N'# 被保人证件号
             elif appntObject["appName"] == '杭州汉盛物流有限公司':
@@ -97,14 +95,12 @@ def issueInterface():
             insuredObject["insuredEmail"] = '' # 不必填
             insuredObject["InsuredGender"] = '' # 不必填
             insuredObject["insuredIDType"] = '06' # 被保人证件类型
-
             if insuredObject["insuredName"] == '杭州钱江物流有限公司':
                 insuredObject["insuredNumber"] = '91330102727621887N'# 被保人证件号
             elif insuredObject["insuredName"] == '杭州汉盛物流有限公司':
                 insuredObject["insuredNumber"] = '91330182322907190D'# 被保人证件号
             else:
                 insuredObject["insuredNumber"] = '不详'# 被保人证件号
-
             insuredObject["insuredTelNumber"] = '不详' # 被保险人电话
             insuredObject["insuredAddress"] = '' # 不必填
             insuredObject["relationship"] = '' # 不必填
@@ -120,14 +116,12 @@ def issueInterface():
             agreementObject["policySpec"] =  "1）被保险人在运输过程中，由于盗窃造成货物的损失，依法应由被保险人承担赔偿责任的，保险人按本保险合同约定负责赔偿。2）对于裸装货物、二手货（旧货）、退货及返修货物，本保险仅承保基本险的风险；3）本保险不负责任何形式的仓储期间的损失，但运输过程中的临时仓储除外；4）承运车辆须具备合格驾驶证、行驶证及营运许可证，否则，保险人不负赔偿责任； 5） 保险人放弃对以下车辆的代位追偿：赣CB6506，赣CB2613，皖CA4152，皖AD3005，赣E66415，赣E43782，赣E66043，粤ACN608，粤ACY261，粤AAK050；但不放弃对任何其它第三方责任人追偿的权利；6）本保单扩展承保目的地为乌鲁木齐的货物。7）未尽事宜以协议（MC9033622202004001）为准" # 特别约定
 
             productDiffObject = {}
-
             productDiffObject["reMark"] = '' # 默认为空
             productDiffObject["vehicleNum"] = row[14] # 运单号 shipid
             productDiffObject["vehicleModel"] = '*'
             productDiffObject["vehicleLen"] = '*'
             productDiffObject["vehicleFrameNum"] = '*' 
             productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
-
             productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
             productDiffObject["goodsPack"] = '08' # 包装方式
             productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
@@ -147,7 +141,7 @@ def issueInterface():
             postdata["productDiffObject"] = productDiffObject
             Json = json.dumps(postdata, ensure_ascii=False)
             Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
-            print(Json)          
+            # print(Json)          
             key = "123456@HT" # 线下提供的密钥
             m = hashlib.md5()
             b = (str(Json2) + key).encode(encoding='utf-8')
@@ -191,27 +185,27 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','沙师弟-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail('manman.zhang@dragonins.com','沙师弟-对接华泰',str(guiderr) + '<br />' + str(error)) 
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _channelCode = content['channelCode'] 
                 _orderId = content['orderId'] 
-                _totalPremium = content['totalPremium'] 
+                _totalPremium = content['totalPremium']
                 _policyNO = content['policyNO'] 
-                _policyURL = content['policyURL']
+                _policyURL = content['policyURL'] 
                 _Status = "投保成功" 
             else: # 投保失败
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
                 sendAlertMail('manman.zhang@dragonins.com','沙师弟-对接华泰',str(guiderr) + '<br />' + str(error)) 
-             # 回写投保表
-            # sql = "UPDATE ssd_ht_remotedata SET Status='%s', errLog='%s', bizContent='%s', custId='%s',relationType='%s' WHERE guid='%s'" %(_Status, _responseInfo, _policyNO, _orderId, _policyURL, guid)
-            # dal.SQLHelper.update(sql,None)
+            # 回写投保表
+            sql = "UPDATE ssd_ht_remotedata SET Status='%s', errLog='%s', bizContent='%s', custId='%s',relationType='%s' WHERE guid='%s'" %(_Status, _responseInfo, _policyNO, _orderId, _policyURL, guid)
+            dal.SQLHelper.update(sql,None)
     except Exception as err:
         traceback.print_exc()
-        print("请求失败",err) 
+        print("请求失败",err)
         sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
 
 issueInterface() # 调用华泰出单接口
