@@ -678,7 +678,7 @@ def ssdpolicy():
         policymodel.deliveryAddress = postdata['endaddress']
         policymodel.departStation = postdata['startareacode']
         policymodel.arriveStation = postdata['endareacode']
-        policymodel.arriveProperty = postdata['transitaddress']
+        policymodel.transitSpot = postdata['transitaddress']
         policymodel.cargoName = postdata['descriptionofgoods']
         policymodel.cargoType = postdata['cargotype']
         policymodel.packageType = postdata['packagetype']
