@@ -126,7 +126,7 @@ def issueInterface():
             productDiffObject["goodsPack"] = '08' # 包装方式
             productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
             productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
-            productDiffObject["transDepot"] = '' # 不必填
+            productDiffObject["transDepot"] = row[46] # 中转地
             productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
             productDiffObject["transDate"] = row[36] # 起运日期
             productDiffObject["transportCost"] = row[18] # 运费
