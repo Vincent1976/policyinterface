@@ -689,10 +689,10 @@ def ssdpolicy():
         policymodel.volume = postdata['volume']
         policymodel.mpRate = postdata['volumeunit']
 
-        ValidInsured = ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==policymodel.appkey,ValidInsured_model.ValidInsured.ValidInsuredName==policymodel.custCoName).all()
-        ValidInsured = model_to_dict(ValidInsured)
-        if len(ValidInsured)==0 :
-            raise Exception('开票信息配置信息不存在，投保失败')
+        # ValidInsured = ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==policymodel.appkey,ValidInsured_model.ValidInsured.ValidInsuredName==policymodel.custCoName).all()
+        # ValidInsured = model_to_dict(ValidInsured)
+        # if len(ValidInsured)==0 :
+        #     raise Exception('开票信息配置信息不存在，投保失败')
         #必填项校验
         exMessage = ''
         
