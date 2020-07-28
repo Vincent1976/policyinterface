@@ -39,6 +39,8 @@ def issueInterface():
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
         sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
+        # sql = "select * from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' and RemoteData.guid = 'b5798d14-fa5e-4080-af73-82ef0e3de6b4' order by CreateDate" 
+
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
         # cursor.close()
@@ -61,7 +63,7 @@ def issueInterface():
             insuranceObject['prmCur'] = '01' 
             insuranceObject['premium'] = row[21] # 保险费
             insuranceObject['amtCur'] = '01'
-            insuranceObject['amount'] = '12000.0' 
+            insuranceObject['amount'] = row[18] 
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
             insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
