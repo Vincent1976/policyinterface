@@ -491,7 +491,7 @@ def jmpolicy():
                 if time - now < 100: # 100相当于小于1分钟
                     exMessage += "当前不允许倒签单;"
                 
-        if policymodel.transitSpot == "" and policymodel.vehiclenumber =="":
+        if policymodel.transitSpot == "" and policymodel.licenseId =="":
             exMessage += "运单号或者车牌号至少一个必填;"
         if policymodel.trafficType == "":
             exMessage += "transportmodecode不能为空;"
@@ -747,7 +747,7 @@ def ssdpolicy():
                 if time - now < 100: # 100相当于小于1分钟
                     exMessage += "当前不允许倒签单;"
                 
-        if policymodel.transitSpot == "" and policymodel.vehiclenumber =="":
+        if policymodel.transitSpot == "" and policymodel.licenseId =="":
             exMessage += "运单号或者车牌号至少一个必填;"
         if policymodel.trafficType == "":
             exMessage += "transportmodecode不能为空;"
