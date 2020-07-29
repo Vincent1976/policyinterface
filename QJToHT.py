@@ -3,9 +3,9 @@ import pymssql
 import requests
 import traceback
 import datetime
-from dateutil.relativedelta import relativedelta
+# from dateutil.relativedelta import relativedelta
 import decimal
-from dals import dal
+# from dals import dal
 import hashlib
 import smtplib
 from email.header import Header
@@ -38,8 +38,8 @@ def issueInterface():
     # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        sql = "select top (1)* from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
-        # sql = "select * from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' and RemoteData.guid = 'b5798d14-fa5e-4080-af73-82ef0e3de6b4' order by CreateDate" 
+        sql = "select * from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
+        # sql = "select  * from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.guid = 'df08fb7d-0824-4191-87cd-bddedcf3dc76'  order by CreateDate desc" 
 
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
@@ -50,14 +50,28 @@ def issueInterface():
             guid = row[0]
             channelObject = {}
             channelObject["bizCode"]= '121' # 交易类型
-            channelObject["channelCode"]='100189' # 渠道编码
-            channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
             channelObject["orderId"]= row[14] # 订单号 shipid
             channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
-
             insuranceObject = {}
+            # 测试
+            # channelObject["channelCode"]='100189' # 渠道编码  
+            # key = "123456@HT" # 线下提供的密钥
+            # channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+            # insuranceObject["insuranceCode"] = '362205' # 险种代码
+            # insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 险种名称(产品名称)
+            #post出单接口请求
+            # url="http://219.141.242.74:9039/service_platform/InsureInterface"
+
+
+            # 正式
+            channelObject["channelCode"]='100189' # 渠道编码  
+            key = "shlk2020@HT" # 线下提供的密钥
+            channelObject["channelName"]='上海励琨' # 渠道名称
             insuranceObject["insuranceCode"] = '362205' # 险种代码
-            insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
+            insuranceObject["insuranceName"] = '上海励琨-钱江物流 ' # 险种名称(产品名称)
+            url="http://219.141.242.74:9004/service_platform/InsureInterface"
+
+
             insuranceObject['plan'] = 'A' # 款别
             insuranceObject['srcCPlyNo'] = '' # 不必填
             insuranceObject['prmCur'] = '01' 
@@ -154,7 +168,6 @@ def issueInterface():
             Json = json.dumps(postdata, ensure_ascii=False)
             Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
             # print(Json)          
-            key = "123456@HT" # 线下提供的密钥
             m = hashlib.md5()
             b = (str(Json2) + key).encode(encoding='utf-8')
             m.update(b)
@@ -167,8 +180,7 @@ def issueInterface():
             log_file.write(str(Json)+'\n')
             #log_file.write(signmd5)
             
-            #post出单接口请求
-            url="http://219.141.242.74:9039/service_platform/InsureInterface"
+            
             # 通过字典方式定义请求body
             FormData = {"json": str(Json), "channelCode": str(channelObject["channelCode"]), "signature": str(signmd5)}
             data = parse.urlencode(FormData)
