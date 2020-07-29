@@ -492,7 +492,7 @@ def jmpolicy():
                 if time - now < 100: # 100相当于小于1分钟
                     exMessage += "当前不允许倒签单;"
                 
-        if policymodel.transitSpot == "" and policymodel.licenseId =="":
+        if policymodel.shipId == "" and policymodel.licenseId =="":
             exMessage += "运单号或者车牌号至少一个必填;"
         if policymodel.trafficType == "":
             exMessage += "transportmodecode不能为空;"
@@ -1421,7 +1421,10 @@ def postInsurer_HT(guid):
         premiumPrit=RBProductInfo[0]['AdditiveNo'] #保费打印
         transportType=GJXXPTProduct[0]['TransportModeCode'] #运输方式（编码）
         transportDetail=GJXXPTProduct[0]['BXcargoName'] #二级运输方式明细（编码）
-        trafficNumber=remotedata[0]['licenseId'] #保险费
+        if remotedata[0]['licenseId']=="":
+            trafficNumber = remotedata[0]['shipId']
+        else:
+            trafficNumber=remotedata[0]['licenseId']
         flightsCheduled="" #航次
         buildYear="" #建造年份
         fromCountry="HTC01" #起运地国家（编码）
