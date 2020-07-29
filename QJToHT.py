@@ -225,7 +225,7 @@ def issueInterface():
                 _Status = "投保失败" 
                 sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
             # 回写remotedata投保表
-            sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', custid= '"+_orderId+"',  relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
+            sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
             cursor.execute(sql) #执行sql 语句
             conn.commit() #提交
     except Exception as err:
