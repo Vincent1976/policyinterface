@@ -621,17 +621,16 @@ def issueInterface(guid):
     from dals import dal
     from urllib import parse
     import requests
-
+    FormData = ""
     try:
-        sql = "select * from ssd_ht_remotedata left join validinsured on ssd_ht_remotedata.appkey = validinsured.Appkey where guid = '"+guid+"'"            
-        data = dal.SQLHelper.fetch_one(sql,None)
-        row = model_to_dict(data)
+        sql = "select * from ssd_ht_remotedata left join validinsured on ssd_ht_remotedata.appkey = validinsured.Appkey where ssd_ht_remotedata.guid = '"+guid+"'"   
+        row = dal.SQLHelper.fetch_one(sql,None)
         postdata={}
         channelObject = {}
         channelObject["bizCode"]= '121' # 交易类型
         channelObject["channelCode"]='100189' # 渠道编码
         channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
-        channelObject["orderId"]= row[0][14] # 订单号 shipid
+        channelObject["orderId"]= row[14] # 订单号 shipid
         channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
 
         insuranceObject = {}
@@ -640,12 +639,11 @@ def issueInterface(guid):
         insuranceObject['plan'] = 'A' # 款别
         insuranceObject['srcCPlyNo'] = '' # 不必填
         insuranceObject['prmCur'] = '01' 
-        insuranceObject['premium'] = row[0][21] # 保险费
+        insuranceObject['premium'] = row[21] # 保险费
         insuranceObject['amtCur'] = '01'
         insuranceObject['amount'] = '12000.0' 
-        insuranceObject['rate'] = str(decimal.Decimal(row[0][68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-
-        insuranceObject['effectiveTime'] = row[0][36] # 保险起期 departDateTime           
+        insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
+        insuranceObject['effectiveTime'] = row[36] # 保险起期 departDateTime           
         insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
         insuranceObject['copy'] = '1' # 份数 
         insuranceObject['docType'] = '' # 不必填
@@ -653,7 +651,7 @@ def issueInterface(guid):
 
         # 需要提供开票的六项信息
         appntObject = {}
-        appntObject["appName"] = row[0][3] # 投保人姓名 custCoName
+        appntObject["appName"] = row[3] # 投保人姓名 custCoName
         appntObject["appType"] = '2' 
         # appntObject["appBirthday"] = '' # 不必填
         appntObject["appEmail"] = '' # 不必填
@@ -665,16 +663,16 @@ def issueInterface(guid):
             appntObject["appNumber"] = '91330182322907190D'# 被保人证件号
         else:
             appntObject["appNumber"] = '不详'# 被保人证件号
-        appntObject["appTelNumber"] = row[0][82] # 投保人电话号
-        appntObject["appAddr"] = row[0][86]# 地址信息
-        appntObject["appContact"] = row[0][74] # 联系人名字
+        appntObject["appTelNumber"] = row[82] # 投保人电话号
+        appntObject["appAddr"] = row[86]# 地址信息
+        appntObject["appContact"] = row[74] # 联系人名字
         appntObject["isTaxInvoice"] = '1' 
-        appntObject["taxCertifi"] = row[0][79] # 税务登记证号
-        appntObject["depositBank"] = row[0][78] # 开户银行
-        appntObject["bankAccount"] = row[0][77] # 银行账户
+        appntObject["taxCertifi"] = row[79] # 税务登记证号
+        appntObject["depositBank"] = row[78] # 开户银行
+        appntObject["bankAccount"] = row[77] # 银行账户
 
         insuredObject = {}
-        insuredObject["insuredName"] = row[0][9] # 被保险人名称
+        insuredObject["insuredName"] = row[9] # 被保险人名称
         insuredObject["insuredType"] = '2' # 
         insuredObject["insuredEmail"] = '' # 不必填
         insuredObject["InsuredGender"] = '' # 不必填
@@ -701,19 +699,19 @@ def issueInterface(guid):
 
         productDiffObject = {}
         productDiffObject["reMark"] = '' # 默认为空
-        productDiffObject["vehicleNum"] = row[0][14] # 运单号 shipid
+        productDiffObject["vehicleNum"] = row[14] # 运单号 shipid
         productDiffObject["vehicleModel"] = '*'
         productDiffObject["vehicleLen"] = '*'
         productDiffObject["vehicleFrameNum"] = '*' 
-        productDiffObject["goodsName"] = row[0][27] # 货物名称 cargoName
-        productDiffObject["goodsQuantity"] = row[0][37] # 货物数量 cargoCount
+        productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
+        productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
         productDiffObject["goodsPack"] = '08' # 包装方式
-        productDiffObject["goodsValue"] = row[0][18] # 货物价值 cargeValue
-        productDiffObject["transFrom"] = row[0][28]+row[0][29]+row[0][30] #  省、市、区（departProvince + departCity + departDistrict）
-        productDiffObject["transDepot"] = row[0][46] # 中转地
-        productDiffObject["transTo"] = row[0][42] # 目的地 deliveryAddress
-        productDiffObject["transDate"] = row[0][36] # 起运日期
-        productDiffObject["transportCost"] = row[0][18] # 运费
+        productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
+        productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
+        productDiffObject["transDepot"] = row[46] # 中转地
+        productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
+        productDiffObject["transDate"] = row[36] # 起运日期
+        productDiffObject["transportCost"] = row[18] # 运费
 
         postdata["channelObject"] = channelObject
         postdata["insuranceObject"] = insuranceObject
@@ -796,7 +794,7 @@ def issueInterface(guid):
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err)
-        sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />')
+        sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
 
 # 投保接口 (沙师弟)
 @app.route('/ssdpolicy', methods=['POST'])
