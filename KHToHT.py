@@ -98,7 +98,7 @@ def issueInterface():
             insuranceObject['amtCur'] = '01'
             insuranceObject['amount'] = row[18] #
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-            insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y/%m/%d %H:%M:%S')) # 保险起期 departDateTime
+            insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y/%m/%d %H:%M:%S'))+ datetime.timedelta(hours=1)) # 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
 
             insuranceObject['copy'] = '1' # 份数 
