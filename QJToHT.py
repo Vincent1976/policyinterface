@@ -38,7 +38,7 @@ def issueInterface():
     # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="insurance",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        sql = "select * from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
+        sql = "select *, datediff(second,CreateDate,departDateTime) 'diff'  from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.status = '等待投保' order by CreateDate" 
         # sql = "select  * from RemoteData left join ValidInsured on RemoteData.appkey = ValidInsured.Appkey where RemoteData.appkey='4a33b1fe29333104b90859253f4d1b68' and RemoteData.guid = 'df08fb7d-0824-4191-87cd-bddedcf3dc76'  order by CreateDate desc" 
 
         cursor.execute(sql)   #执行sql语句
@@ -48,6 +48,16 @@ def issueInterface():
         for row in data:
             postdata={}
             guid = row[0]
+
+            # 校验倒签
+            diff=float(row[91])
+            if diff<0:
+                sql = "UPDATE remotedata SET Status = '投保失败', errLog = '起运日期不能早于投保日期' WHERE guid = '"+guid+"'"
+                cursor.execute(sql)
+                conn.commit()
+                sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','钱江——华泰投递出错','起运日期不能早于投保日期，guid=' + str(guid))
+                continue
+
             channelObject = {}
             channelObject["bizCode"]= '101' # 交易类型
             channelObject["orderId"]= row[14] # 订单号 shipid
@@ -79,8 +89,7 @@ def issueInterface():
             insuranceObject['amtCur'] = '01'
             insuranceObject['amount'] = row[18] 
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-            # insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
-            insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y-%m-%d %H:%M:%S')+datetime.timedelta(hours=1))# 保险起期 departDateTime
+            insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
             insuranceObject['copy'] = '1' # 份数 
             insuranceObject['docType'] = '' # 不必填
@@ -155,7 +164,7 @@ def issueInterface():
             productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
             productDiffObject["transDepot"] = row[46] # 中转地
             productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
-            productDiffObject["transDate"] = str(datetime.datetime.strptime(row[36],'%Y-%m-%d %H:%M:%S')+datetime.timedelta(hours=1)) # 起运日期
+            productDiffObject["transDate"] = row[36] # 起运日期
             productDiffObject["transportCost"] = row[18] # 运费
 
             postdata["channelObject"] = channelObject
@@ -210,7 +219,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -224,7 +233,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
+                sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
             # 回写remotedata投保表
             sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
             cursor.execute(sql) #执行sql 语句
@@ -232,7 +241,7 @@ def issueInterface():
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
-        sendAlertMail('manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
+        sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','钱江——华泰投递出错',str(err)+'<br />' + str(FormData))
 
 issueInterface() # 调用华泰出单接口
 
