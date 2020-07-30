@@ -69,19 +69,23 @@ def issueInterface():
             claimLimit= float(row[17])
             cargoFreight=float(row[16])
             insuranceFee=float(row[21])
+            rate=str(decimal.Decimal(row[68][:-1]) * 10)
             policyDeductible=''
             if claimLimit==300000:
                 policyDeductible='RMB1,000元或损失金额的5%,以高者为准'
+                rate='1.5'
                 insuranceFee=cargoFreight*0.0015
                 if insuranceFee<=3.5:
                     insuranceFee=3.5
             elif claimLimit==2000000:
                 policyDeductible='RMB2,000元或损失金额的5%,以高者为准'
+                rate='2'
                 insuranceFee=cargoFreight*0.002
                 if insuranceFee<=10:
                     insuranceFee=10
             elif claimLimit==5000000:
                 policyDeductible='RMB3,000元或损失金额的5%,以高者为准'
+                rate='2.5'
                 insuranceFee=cargoFreight*0.0025
                 if insuranceFee<=25:
                     insuranceFee=25
@@ -97,8 +101,8 @@ def issueInterface():
             insuranceObject['premium'] = str(insuranceFee) # 保险费
             insuranceObject['amtCur'] = '01'
             insuranceObject['amount'] = row[18] #
-            insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-            insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y/%m/%d %H:%M:%S'))+ datetime.timedelta(hours=1)) # 保险起期 departDateTime
+            insuranceObject['rate'] = rate # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
+            insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y/%m/%d %H:%M:%S'))+ datetime.timedelta(hours=1) # 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
 
             insuranceObject['copy'] = '1' # 份数 
