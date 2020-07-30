@@ -49,7 +49,7 @@ def issueInterface():
             postdata={}
             guid = row[0]
             channelObject = {}
-            channelObject["bizCode"]= '121' # 交易类型
+            channelObject["bizCode"]= '101' # 交易类型
             channelObject["orderId"]= row[14] # 订单号 shipid
             channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
             insuranceObject = {}
