@@ -54,7 +54,7 @@ def issueInterface():
 
             # 校验倒签
             diff=float(row[76])
-            if diff<0:
+            if diff<1200:
                 sql = "UPDATE remotedata SET Status = '投保失败', errLog = '起运日期不能早于投保日期' WHERE guid = '"+guid+"'"
                 cursor.execute(sql)
                 conn.commit()
