@@ -747,11 +747,12 @@ def issueInterface(guid):
         }
         # 请求方式
         content = requests.post(url=url, headers=headers, data=data).text
+        # print(content)
         content = json.loads(content)
         log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
         log_file.write(str(content))
         log_file.close()
-        print(content)
+        
         _bizCode = "" # 业务类型
         # _responseCode = "" # 错误代码
         _Flag = "" # 错误代码
