@@ -15,7 +15,7 @@ from urllib import parse
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
     sender = 'policy@dragonins.com'
-    receivers = [mailaddr]  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+    receivers = mailaddr  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
     # 三个参数：第一个为文本内容，第二个 plain 设置文本格式，第三个 utf-8 设置编码
     message = MIMEText(mailcontent, 'html', 'utf-8')
     message['Subject'] = Header(mailtitle, 'utf-8')
@@ -37,7 +37,7 @@ def issueInterface():
     FormData=''
 
     try:
-    # 打开数据库连接
+        # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="kahang",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
         sql = "select top (1) *,datediff(second,CreateDate,departDateTime) 'diff' from RemoteData where RemoteData.appkey='03D9AC28-3AF5-488C-9F5A-2EDD41331F8A' and RemoteData.status = '等待投保' order by CreateDate desc" 
@@ -262,7 +262,7 @@ def issueInterface():
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
-        sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','卡航投递华泰出错',str(err)+'<br />' + str(FormData))
+        sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com'],'卡航投递华泰出错',str(err)+'<br />' + str(FormData))
 
 issueInterface() # 调用华泰出单接口
 
