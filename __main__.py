@@ -1399,7 +1399,8 @@ def postInsurer_HT(guid):
         packAndQuantity=remotedata[0]['packageType']+remotedata[0]['cargoWeight']+remotedata[0]['mpAmount'] #包装及数量
         fregihtItem=remotedata[0]['cargoName'] #货物项目
         invoiceNumber="" #发票号
-        billNumber="详见运单" #提单号
+        #billNumber="详见运单" #提单号
+        billNumber = remotedata[0]['shipId']
         freightType=GJXXPTProduct[0]['CargoTypeClassification1'] #货物类型（编码）
         freightDetail=GJXXPTProduct[0]['BXcargoCode'] #二级货物类型明细（编码）
         invoiceMoney=remotedata[0]['cargeValue'] #发票金额
