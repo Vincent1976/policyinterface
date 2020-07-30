@@ -58,7 +58,7 @@ def issueInterface():
                 sql = "UPDATE remotedata SET Status = '投保失败', errLog = '起运日期不能早于投保日期' WHERE guid = '"+guid+"'"
                 cursor.execute(sql)
                 conn.commit()
-                sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','华泰投递出错','起运日期不能早于投保日期，guid=' + str(guid))
+                sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','卡航投递华泰出错','起运日期不能早于投保日期，guid=' + str(guid))
                 continue
 
             # 校验被保险人
@@ -262,7 +262,7 @@ def issueInterface():
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
-        sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','华泰投递出错',str(err)+'<br />' + str(FormData))
+        sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','卡航投递华泰出错',str(err)+'<br />' + str(FormData))
 
 issueInterface() # 调用华泰出单接口
 
