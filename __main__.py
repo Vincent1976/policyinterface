@@ -1401,7 +1401,7 @@ def postInsurer_HT(guid):
         fregihtItem=remotedata[0]['cargoName'] #货物项目
         invoiceNumber="" #发票号
         #billNumber="详见运单" #提单号
-        billNumber = remotedata[0]['shipId']
+        billNumber = "订单号 "+remotedata[0]['shipId']
         freightType=GJXXPTProduct[0]['CargoTypeClassification1'] #货物类型（编码）
         freightDetail=GJXXPTProduct[0]['BXcargoCode'] #二级货物类型明细（编码）
         invoiceMoney=remotedata[0]['cargeValue'] #发票金额
@@ -1422,9 +1422,9 @@ def postInsurer_HT(guid):
         transportType=GJXXPTProduct[0]['TransportModeCode'] #运输方式（编码）
         transportDetail=GJXXPTProduct[0]['BXcargoName'] #二级运输方式明细（编码）
         if remotedata[0]['licenseId']=="":
-            trafficNumber = remotedata[0]['shipId']
+            trafficNumber = "订单号 "+ remotedata[0]['shipId']
         else:
-            trafficNumber=remotedata[0]['licenseId']
+            trafficNumber = "车牌号 "+ remotedata[0]['licenseId']
         flightsCheduled="" #航次
         buildYear="" #建造年份
         fromCountry="HTC01" #起运地国家（编码）
