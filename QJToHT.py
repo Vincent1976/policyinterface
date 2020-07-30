@@ -53,7 +53,7 @@ def issueInterface():
             channelObject["orderId"]= row[14] # 订单号 shipid
             channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
             insuranceObject = {}
-            # 测试
+            # 测试环境
             # channelObject["channelCode"]='100189' # 渠道编码  
             # key = "123456@HT" # 线下提供的密钥
             # channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
@@ -63,7 +63,7 @@ def issueInterface():
             # url="http://219.141.242.74:9039/service_platform/InsureInterface"
 
 
-            # 正式
+            # 正式环境
             channelObject["channelCode"]='100189' # 渠道编码  
             key = "shlk2020@HT" # 线下提供的密钥
             channelObject["channelName"]='上海励琨' # 渠道名称
@@ -79,7 +79,8 @@ def issueInterface():
             insuranceObject['amtCur'] = '01'
             insuranceObject['amount'] = row[18] 
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-            insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
+            # insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
+            insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y-%m-%d %H:%M:%S')+datetime.timedelta(hours=1))# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
             insuranceObject['copy'] = '1' # 份数 
             insuranceObject['docType'] = '' # 不必填
@@ -154,7 +155,7 @@ def issueInterface():
             productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
             productDiffObject["transDepot"] = row[46] # 中转地
             productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
-            productDiffObject["transDate"] = row[36] # 起运日期
+            productDiffObject["transDate"] = str(datetime.datetime.strptime(row[36],'%Y-%m-%d %H:%M:%S')+datetime.timedelta(hours=1)) # 起运日期
             productDiffObject["transportCost"] = row[18] # 运费
 
             postdata["channelObject"] = channelObject
