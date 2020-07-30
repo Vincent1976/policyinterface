@@ -40,7 +40,7 @@ def issueInterface():
     # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="kahang",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        sql = "select top (1)* from RemoteData where RemoteData.appkey='03D9AC28-3AF5-488C-9F5A-2EDD41331F8A' and RemoteData.status = '等待投保' order by CreateDate desc" 
+        sql = "select top (1) *,datediff(second,CreateDate,departDateTime) 'diff' from RemoteData where RemoteData.appkey='03D9AC28-3AF5-488C-9F5A-2EDD41331F8A' and RemoteData.status = '等待投保' order by CreateDate desc" 
 
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
@@ -49,6 +49,17 @@ def issueInterface():
         print(data)
 
         for row in data:
+            postdata={}
+            guid = row[0] 
+
+            # 校验倒签
+            diff=float(row[76])
+            if diff<0:
+                sql = "UPDATE remotedata SET Status = '投保失败', errLog = '起运日期不能早于投保日期' WHERE guid = '"+guid+"'"
+                cursor.execute(sql)
+                conn.commit()
+                sendAlertMail('qian.hong@dragonins.com,manman.zhang@dragonins.com','华泰投递出错','起运日期不能早于投保日期，guid=' + str(guid))
+                continue
 
             # 校验被保险人
             cursor.execute("select * from ValidInsured where ValidInsuredName='"+str(row[3])+"'")
@@ -56,8 +67,6 @@ def issueInterface():
             if len(insuredData)==0:
                 raise Exception("被保险人"+str(row[3])+"未配置")
 
-            postdata={}
-            guid = row[0] 
             channelObject = {}
             channelObject["bizCode"]= '121' # 交易类型
             channelObject["channelCode"]='100189' # 渠道编码
