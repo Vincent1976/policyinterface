@@ -1511,9 +1511,11 @@ def postInsurer_HT(guid):
         if productNo=="LK999999":
             url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl"
             key = "1qaz2wsx" # 测试key
+        elif productNo=="LK046001":
+            url = "http://219.141.242.74:9081/HT_interfacePlatform/webservice/ImportService?wsdl" # 生产地址
+            key = "2wsx1qaz" # 生产key
         else:
-            url = "" # 生产地址
-            key = "" # 生产key
+            raise Exception("产品编号【"+productNo+"】尚未开通投保")
 
         if url == "":
             raise Exception("投保系统尚未开通")
