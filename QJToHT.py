@@ -82,11 +82,16 @@ def issueInterface():
             insuranceObject["insuranceName"] = '上海励琨-钱江物流 ' # 险种名称(产品名称)
             url="http://219.141.242.74:9004/service_platform/InsureInterface"
 
-
             insuranceObject['plan'] = 'A' # 款别
             insuranceObject['srcCPlyNo'] = '' # 不必填
             insuranceObject['prmCur'] = '01' 
-            insuranceObject['premium'] = row[21] # 保费
+
+            # 保费为0时校验
+            insuranceFee=float(row[21])
+            if insuranceFee == 0.0:
+                insuranceFee = 0.01
+
+            insuranceObject['premium'] = insuranceFee # 保费       
             insuranceObject['amtCur'] = '01'
             insuranceObject['amount'] = row[18] # 保额
             insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
