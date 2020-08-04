@@ -369,7 +369,7 @@ def jmpolicy():
     from models import GJXXPT_Product_model
     from dals import dal
     from models import ValidInsured_model
-
+    postdata = ""
     try:
         # 获取请求 
         postdata = json.loads(request.get_data(as_text=True))
@@ -603,6 +603,11 @@ def jmpolicy():
         result['premium'] = ''
         result['policyno'] = ''
         result['downloadurl'] = ''
+        log_file = open('logs/' + newguid +'_jmpolicy.log',mode='a')
+        log_file.write('---------------------------聚盟报错信息 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(err))
+        log_file.close()
+        sendAlertMail('manman.zhang@dragonins.com','聚盟—华泰投递出错',str(err)+'<br />' + str(postdata))
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
 
