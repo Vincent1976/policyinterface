@@ -169,7 +169,7 @@ def issueInterface():
             productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
             productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
             productDiffObject["transDepot"] = row[46] # 中转地
-            productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
+            productDiffObject["transTo"] = row[31]+row[32]+row[33]+row[42] # 目的地 省、市、区（destinationProvice + destinationCity + destinationDistrict+deliveryAddress
             productDiffObject["transDate"] = row[36] # 起运日期
             productDiffObject["transportCost"] = row[18] # 运费
 
