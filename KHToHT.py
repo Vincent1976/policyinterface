@@ -122,7 +122,12 @@ def issueInterface():
                 if insuranceFee<=25:
                     insuranceFee=25
             else:
-                raise Exception("赔款限额不存在")
+                sql = "UPDATE remotedata SET Status = '投保失败', errLog = '赔款限额不存在' WHERE guid = '"+guid+"'"
+                cursor.execute(sql) 
+                conn.commit() 
+                sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com','zhanghy@unair.cn','jianbo.li@unair.cn'],'卡航投递华泰出错，赔款限额不存在','运单'+str(row[10])+'的赔款限额'+str(row[17])+'不存在，烦请及时查看处理')
+                continue
+                # raise Exception("赔款限额不存在")
 
             insuranceObject['plan'] = plan # 款别
             insuranceObject['srcCPlyNo'] = '' # 不必填
@@ -193,7 +198,7 @@ def issueInterface():
             productDiffObject["vehicleModel"] = '*'
             productDiffObject["vehicleLen"] = '*'
             productDiffObject["vehicleFrameNum"] = '*' 
-            productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
+            productDiffObject["goodsName"] = str(row[27])+'（载运输工具：'+str(row[15])+'）' # 货物名称 cargoName
 
             productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
             productDiffObject["goodsPack"] = '08' # 包装方式
@@ -223,7 +228,7 @@ def issueInterface():
             postdata["agreementObject"] = agreementObject
             postdata["productDiffObject"] = productDiffObject
             Json = json.dumps(postdata, ensure_ascii=False)
-            Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
+            Json2 = Json.replace("%", "%25").replace("&", "%26").replace("+", "%2B")
             print(Json)          
             m = hashlib.md5()
             b = (str(Json2) + key).encode(encoding='utf-8')
@@ -266,7 +271,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','卡航-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail(['manman.zhang@dragonins.com','qian.hong@dragonins.com'],'卡航-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -280,7 +285,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail('manman.zhang@dragonins.com','卡航-对接华泰',str(guiderr) + '<br />' + str(error)) 
+                sendAlertMail(['manman.zhang@dragonins.com','qian.hong@dragonins.com'],'卡航-对接华泰',str(guiderr) + '<br />' + str(error)) 
             # # 回写remotedata投保表
             sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', policySolutionID = '"+_policyNO+"', relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
             cursor.execute(sql) #执行sql 语句
