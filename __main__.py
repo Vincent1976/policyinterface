@@ -1382,6 +1382,9 @@ def getjmpolicy(appkey, billno):
                 responsemessage = "投保失败"
             else:
                 responsemessage = "等待投保"
+
+        channelOrderId = dataresult[0]['channelOrderId']    
+        
         result = {}       
         result['responsecode'] = 1
         result['responsemessage'] = responsemessage
