@@ -182,7 +182,7 @@ def issueInterface():
             postdata["agreementObject"] = agreementObject
             postdata["productDiffObject"] = productDiffObject
             Json = json.dumps(postdata, ensure_ascii=False)
-            Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
+            Json2 = Json.replace("%", "%25").replace("&", "%26").replace("+", "%2B")
             # print(Json)          
             m = hashlib.md5()
             b = (str(Json2) + key).encode(encoding='utf-8')
