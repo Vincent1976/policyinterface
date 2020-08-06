@@ -1372,25 +1372,28 @@ def getjmpolicy(appkey, billno):
     try:
         remotedata = jm_ht_policy_model.jm_ht_remotedata.query.filter(jm_ht_policy_model.jm_ht_remotedata.appkey==appkey, jm_ht_policy_model.jm_ht_remotedata.shipId==billno).order_by(jm_ht_policy_model.jm_ht_remotedata.CreateDate.desc()).all()
         dataresult = model_to_dict(remotedata)
+        result = {}       
         if len(dataresult) == 0:
             raise Exception('无法找到您要查询的运单')
         else:
             status = dataresult[0]['Status']
             if status == "投保成功":
                 responsemessage = '投保成功'
+                result['responsecode'] = 1
+                result['responsemessage'] = responsemessage
             elif status == "投保失败":
                 responsemessage = "投保失败"
+                result['responsecode'] = 0
+                result['responsemessage'] = dataresult[0]['errLog']
             else:
                 responsemessage = "等待投保"
+                result['responsecode'] = -1
+                result['responsemessage'] = responsemessage
 
         channelOrderId = dataresult[0]['channelOrderId']    
-        
-        result = {}       
-        result['responsecode'] = 1
-        result['responsemessage'] = responsemessage
         result['applicationserial'] = str(dataresult[0]['guid'])
         result['appkey'] = appkey
-        result['sequencecode'] = dataresult[0]['channelOrderId']
+        result['sequencecode'] = channelOrderId
         result['premium'] = dataresult[0]['insuranceFee']
         result['policyno'] = dataresult[0]['policyNo']
         result['downloadurl'] = dataresult[0]['relationType']
