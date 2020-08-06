@@ -3,9 +3,7 @@ import pymssql
 import requests
 import traceback
 import datetime
-from dateutil.relativedelta import relativedelta
 import decimal
-from dals import dal
 import hashlib
 import smtplib
 from email.header import Header
@@ -40,7 +38,7 @@ def issueInterface():
         # 打开数据库连接
         conn = pymssql.connect(host="121.36.193.132",port = "15343",user="sa",password="sate1llite",database="kahang",charset='utf8')
         cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
-        sql = "select top (1) *,datediff(second,CreateDate,departDateTime) 'diff' from RemoteData where RemoteData.appkey='03D9AC28-3AF5-488C-9F5A-2EDD41331F8A' and RemoteData.status = '等待投保' order by CreateDate desc" 
+        sql = "select *,datediff(second,CreateDate,departDateTime) 'diff' from RemoteData where RemoteData.appkey='03D9AC28-3AF5-488C-9F5A-2EDD41331F8A' and RemoteData.status = '等待投保' order by CreateDate desc" 
 
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
@@ -68,9 +66,26 @@ def issueInterface():
                 raise Exception("被保险人"+str(row[3])+"未配置")
 
             channelObject = {}
-            channelObject["bizCode"]= '121' # 交易类型
+            insuranceObject = {}
+
+            ############################ 测试环境
+            # channelObject["channelCode"]= '100192' # 渠道编码
+            # key = "123456@HT" # 线下提供的密钥
+            # channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+            # insuranceObject["insuranceCode"] = '362206' # 险种代码
+            # insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
+            # url="http://219.141.242.74:9039/service_platform/InsureInterface"
+
+            ############################ 正式环境
             channelObject["channelCode"]= '100192' # 渠道编码
-            channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+            key = "shlkkh2020@HT" # 线下提供的密钥
+            channelObject["channelName"]='上海励琨' # 渠道名称
+            insuranceObject["insuranceCode"] = '362206' # 险种代码
+            insuranceObject["insuranceName"] = '上海励琨-卡航 ' # 产品名称
+            url="http://219.141.242.74:9004/service_platform/InsureInterface"
+
+
+            channelObject["bizCode"]= '121' # 交易类型
             channelObject["orderId"]= row[14] # 订单号 shipid
             channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
 
@@ -107,11 +122,13 @@ def issueInterface():
                 if insuranceFee<=25:
                     insuranceFee=25
             else:
-                raise Exception("赔款限额不存在")
+                sql = "UPDATE remotedata SET Status = '投保失败', errLog = '赔款限额不存在' WHERE guid = '"+guid+"'"
+                cursor.execute(sql) 
+                conn.commit() 
+                sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com','zhanghy@unair.cn','jianbo.li@unair.cn'],'卡航投递华泰出错，赔款限额不存在','运单'+str(row[10])+'的赔款限额'+str(row[17])+'不存在，烦请及时查看处理')
+                continue
+                # raise Exception("赔款限额不存在")
 
-            insuranceObject = {}
-            insuranceObject["insuranceCode"] = '362206' # 险种代码
-            insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
             insuranceObject['plan'] = plan # 款别
             insuranceObject['srcCPlyNo'] = '' # 不必填
             insuranceObject['prmCur'] = '01' 
@@ -181,7 +198,7 @@ def issueInterface():
             productDiffObject["vehicleModel"] = '*'
             productDiffObject["vehicleLen"] = '*'
             productDiffObject["vehicleFrameNum"] = '*' 
-            productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
+            productDiffObject["goodsName"] = str(row[27])+'（载运输工具：'+str(row[15])+'）' # 货物名称 cargoName
 
             productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
             productDiffObject["goodsPack"] = '08' # 包装方式
@@ -211,9 +228,8 @@ def issueInterface():
             postdata["agreementObject"] = agreementObject
             postdata["productDiffObject"] = productDiffObject
             Json = json.dumps(postdata, ensure_ascii=False)
-            Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
+            Json2 = Json.replace("%", "%25").replace("&", "%26").replace("+", "%2B")
             print(Json)          
-            key = "123456@HT" # 线下提供的密钥
             m = hashlib.md5()
             b = (str(Json2) + key).encode(encoding='utf-8')
             m.update(b)
@@ -227,7 +243,6 @@ def issueInterface():
             #log_file.write(signmd5)
             
             #post出单接口请求
-            url="http://219.141.242.74:9039/service_platform/InsureInterface"
             # 通过字典方式定义请求body
             FormData = {"json": str(Json), "channelCode": str(channelObject["channelCode"]), "signature": str(signmd5)}
             data = parse.urlencode(FormData)
@@ -256,7 +271,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail('manman.zhang@dragonins.com','卡航-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail(['manman.zhang@dragonins.com','qian.hong@dragonins.com'],'卡航-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -270,7 +285,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail('manman.zhang@dragonins.com','卡航-对接华泰',str(guiderr) + '<br />' + str(error)) 
+                sendAlertMail(['manman.zhang@dragonins.com','qian.hong@dragonins.com'],'卡航-对接华泰',str(guiderr) + '<br />' + str(error)) 
             # # 回写remotedata投保表
             sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', policySolutionID = '"+_policyNO+"', relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
             cursor.execute(sql) #执行sql 语句
@@ -308,7 +323,7 @@ def postToQL_BS_Old(guid):
         if str(data[0][52])=='投保成功':
             certificateNo = str(data[0][69])
             validFrom = str(data[0][36])
-            policyDownloadUrl = "http://121.36.193.132:8088/03D9AC28-3AF5-488C-9F5A-2EDD41331F8A/" + certificateNo + ".pdf"
+            policyDownloadUrl = str(data[0][44])
             isSuccess = "成功"
             retMsg = ""
         else:
@@ -353,7 +368,7 @@ def postToQL_BS(guid):
         if str(data[0][52])=='投保成功':
             certificateNo = str(data[0][69])
             validFrom = str(data[0][36])
-            policyDownloadUrl = "http://121.36.193.132:8088/03D9AC28-3AF5-488C-9F5A-2EDD41331F8A/" + certificateNo + ".pdf"
+            policyDownloadUrl = str(data[0][44])
             isSuccess = "成功"
             retMsg = ""
         else:
