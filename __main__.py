@@ -1364,6 +1364,48 @@ def getpolicy(appkey, billno):
         return json.loads(result)
 
 
+# 聚盟结果查询
+@app.route('/getjmpolicy/<appkey>/<billno>', methods=['GET'])
+def getjmpolicy(appkey, billno):
+    from models import jm_ht_policy_model
+    channelOrderId = ""
+    try:
+        remotedata = jm_ht_policy_model.jm_ht_remotedata.query.filter(jm_ht_policy_model.jm_ht_remotedata.appkey==appkey, jm_ht_policy_model.jm_ht_remotedata.shipId==billno).order_by(jm_ht_policy_model.jm_ht_remotedata.CreateDate.desc()).all()
+        dataresult = model_to_dict(remotedata)
+        if len(dataresult) == 0:
+            raise Exception('无法找到您要查询的运单')
+        else:
+            status = dataresult[0]['Status']
+            if status == "投保成功":
+                responsemessage = '投保成功'
+            elif status == "投保失败":
+                responsemessage = "投保失败"
+            else:
+                responsemessage = "等待投保"
+        result = {}       
+        result['responsecode'] = 1
+        result['responsemessage'] = responsemessage
+        result['applicationserial'] = str(dataresult[0]['guid'])
+        result['appkey'] = appkey
+        result['sequencecode'] = dataresult[0]['channelOrderId']
+        result['premium'] = dataresult[0]['insuranceFee']
+        result['policyno'] = dataresult[0]['policyNo']
+        result['downloadurl'] = dataresult[0]['relationType']
+        return json.dumps(result)
+    except Exception as err:
+        traceback.print_exc()
+        result = {}
+        result['responsecode'] = 0
+        result['responsemessage'] = str(err)
+        result['applicationserial'] = ''
+        result['appkey'] = appkey
+        result['sequencecode'] = channelOrderId
+        result['premium'] = ''
+        result['policyno'] = ''
+        result['downloadurl'] = ''
+        return json.dumps(result)
+
+
 # 投递保险公司(华泰)
 def postInsurer_HT(guid):
     from models import RBProductInfo_model
