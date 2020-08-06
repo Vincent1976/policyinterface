@@ -29,10 +29,10 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
 conn = pymssql.connect(host="121.36.204.186",port = "15343",user="sa",password="sate1llite",database="newInsurance",charset='utf8')
 cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要通过cursor 来执行
 # 每日定时获取德坤前日所有投保数据发邮件给保险公司
-def getDKRemoteDataToEmail(file_excel):
+def getDKRemoteDataToEmail():
     try:
         # 打开数据库连接
-        sql = "select custCoName,insuredName, channelOrderId,licenseId,trafficType,packageType,cargoType,cargoName,departProvince,departCity,departDateTime,cargoCount,deliveryAddress,policyRate from RemoteData where deliveryOrderId='深圳机场山东项目'and policyNo<>'TEST' and ExceptionStatus <> '已写入'" 
+        sql = "select custCoName,insuredName, channelOrderId,licenseId,trafficType,packageType,cargoType,cargoName,departProvince,departCity,departDateTime,cargoCount,deliveryAddress,policyRate from RemoteData where deliveryOrderId='深圳机场山东项目' and policyNo<>'TEST' and ExceptionStatus <> '已写入'" 
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
         data1 =[]
@@ -62,15 +62,14 @@ def w_excel(data):
         row+=1
     col+=1
     filename = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
-    book.save("D:\\AutoDeclareToZA_QL\\PolicyFiles\\" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") + 'dkexcel' + '.xls')
+    book.save("D:\\AutoDeclareToZA_QL\\PolicyFiles\\" + filename + 'dkexcel' + '.xls')
     sql = "update RemoteData set ExceptionStatus = '已写入' where deliveryOrderId = '深圳机场山东项目'"
     cursor.execute(sql)   #执行sql语句
     conn.commit() #提交
     sendAlertMail(('manman.zhang@dragonins.com'),'德坤运输清单已发送，请点击下方的链接进行下载文件','http://121.36.193.132:8088/'+filename + 'dkexcel' + '.xls')
     print("导出成功！")
 if __name__ == "__main__":
-    file_excel = r"E:\dklog\1.xls"
-    getDKRemoteDataToEmail(file_excel)
+    getDKRemoteDataToEmail()
 
 
          
