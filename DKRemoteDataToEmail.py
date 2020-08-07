@@ -10,7 +10,7 @@ import xlwt
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
     sender = 'policy@dragonins.com'
-    receivers = [mailaddr]  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+    receivers = mailaddr  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
     # 三个参数：第一个为文本内容，第二个 plain 设置文本格式，第三个 utf-8 设置编码
     message = MIMEText(mailcontent, 'html', 'utf-8')
     message['Subject'] = Header(mailtitle, 'utf-8')
@@ -32,42 +32,42 @@ cursor = conn.cursor() #创建一个游标对象，python 里的sql 语句都要
 def getDKRemoteDataToEmail():
     try:
         # 打开数据库连接
-        sql = "select custCoName,insuredName, channelOrderId,licenseId,trafficType,packageType,cargoType,cargoName,departProvince,departCity,departDateTime,cargoCount,deliveryAddress,policyRate from RemoteData where deliveryOrderId='深圳机场山东项目' and policyNo<>'TEST' and ExceptionStatus <> '已写入'" 
+        sql = "select custCoName,insuredName, channelOrderId,licenseId,trafficType,packageType,cargoType,cargoName,departProvince,departCity,departDateTime,cargoCount,deliveryAddress,cargeValue,policyRate,insuranceFee from RemoteData where deliveryOrderId='深圳机场山东项目' and policyNo<>'TEST' and ExceptionStatus <>'已写入'" 
         cursor.execute(sql)   #执行sql语句
         data = cursor.fetchall()  #读取查询结果
-        data1 =[]
-        for row in data:
-            pams = ('深圳德坤物流有限公司及其下属分公司，子公司及控股公司', '实际货主',row[2],row[3],row[4],row[5],row[6],row[7],row[8],row[9],row[10],row[11],row[12],row[13])        
-            data1.append(pams)
-        w_excel(data1)
+        if len(data)!=0 :
+            data1 =[]
+            for row in data:
+                pams = {}
+                pams["custCoName"] = '深圳德坤物流有限公司及其下属分公司，子公司及控股公司'
+                pams["insuredName"] = '实际货主'
+                pams["channelOrderId"] = row[2]
+                pams["licenseId"] = row[3]
+                pams["trafficType"] = row[4]
+                pams["packageType"] = row[5]
+                pams["cargoType"] = row[6]
+                pams["cargoName"] = row[7]
+                pams["departProvince"] = row[8]
+                pams["departCity"] = row[9]
+                pams["departDateTime"] = row[10]
+                pams["cargoCount"] = row[11]
+                pams["deliveryAddress"] = row[12]
+                pams["cargeValue"] = row[13]
+                pams["policyRate"] = row[14]
+                pams["insuranceFee"] = row[15]
+                data1.append(pams)
+            html = ""
+            for i in range(len(data1)):
+                html += "投保人："+data1[i].get("custCoName")+'<br/>'+"被保险人:" + data1[i].get("insuredName")+'<br/>'+"发车批次:" + data1[i].get("channelOrderId")+'<br/>' +"车牌号-车辆类型:" + data1[i].get("licenseId")+'<br/>'+"运输方式:" + data1[i].get("trafficType")+'<br/>' +"包装方式:" + data1[i].get("packageType")+'<br/>' +"货物类型:" + data1[i].get("cargoType")+'<br/>' "货物名称："+data1[i].get("cargoName")+'<br/>'+"起运省："+data1[i].get("departProvince")+'<br/>'+"起运市："+data1[i].get("departCity")+'<br/>'+"起运日期："+data1[i].get("departDateTime")+'<br/>'+"件数/重量："+data1[i].get("cargoCount")+'<br/>'+"目的地："+data1[i].get("deliveryAddress")+'<br/>'+"保额："+data1[i].get("cargeValue")+'<br/>'+"费率："+data1[i].get("policyRate")+'<br/>'+"保费："+data1[i].get("insuranceFee")+'<br/>'+'<br/>'+'<br/>'
+            sendAlertMail(['zhangliyong-001@cpic.com.cn,dongping.yi@dragonins.com','shuxian.he@dragonins.com'],'【'+datetime.datetime.now().strftime("%Y-%m-%d")+'】'+'--德坤深圳机场山东项目单票投保','您好'+ '<br/>' +'客户投保信息如下起保日期【'+datetime.datetime.now().strftime("%Y-%m-%d")+'】'+'请出具保单。'+'<br/>'+'<br/>' + html)
+            sql = "update RemoteData set ExceptionStatus = '已写入' where deliveryOrderId = '深圳机场山东项目'"
+            cursor.execute(sql)   #执行sql语句
+            conn.commit() #提交       
+        # w_excel(data1)
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
         sendAlertMail(('manman.zhang@dragonins.com'),'德坤发送失败，请及时处理',str(err))
-#操作excel
-def w_excel(data):
-    book = xlwt.Workbook() #新建一个excel
-    sheet = book.add_sheet(datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")+'dkexcel') #新建一个sheet页
-    title = ['custCoName','insuredName','channelOrderId','licenseId','trafficType','packageType','cargoType','cargoName','departProvince','departCity','departDateTime','cargoCount','deliveryAddress','policyRate']
-    #写表头
-    i = 0
-    for header in title:
-        sheet.write(0,i,header)
-        i+=1
-        
-#写入数据
-    for row in range(1,len(data)):
-        for col in range(0,len(data[row])):
-            sheet.write(row,col,data[row][col])
-        row+=1
-    col+=1
-    filename = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
-    book.save("D:\\AutoDeclareToZA_QL\\PolicyFiles\\" + filename + 'dkexcel' + '.xls')
-    sql = "update RemoteData set ExceptionStatus = '已写入' where deliveryOrderId = '深圳机场山东项目'"
-    cursor.execute(sql)   #执行sql语句
-    conn.commit() #提交
-    sendAlertMail(('manman.zhang@dragonins.com'),'德坤运输清单已发送，请点击下方的链接进行下载文件','http://121.36.193.132:8088/'+filename + 'dkexcel' + '.xls')
-    print("导出成功！")
 if __name__ == "__main__":
     getDKRemoteDataToEmail()
 
