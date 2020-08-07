@@ -59,7 +59,7 @@ def getDKRemoteDataToEmail():
             html = ""
             for i in range(len(data1)):
                 html += "投保人："+data1[i].get("custCoName")+'<br/>'+"被保险人:" + data1[i].get("insuredName")+'<br/>'+"发车批次:" + data1[i].get("channelOrderId")+'<br/>' +"车牌号-车辆类型:" + data1[i].get("licenseId")+'<br/>'+"运输方式:" + data1[i].get("trafficType")+'<br/>' +"包装方式:" + data1[i].get("packageType")+'<br/>' +"货物类型:" + data1[i].get("cargoType")+'<br/>' "货物名称："+data1[i].get("cargoName")+'<br/>'+"起运省："+data1[i].get("departProvince")+'<br/>'+"起运市："+data1[i].get("departCity")+'<br/>'+"起运日期："+data1[i].get("departDateTime")+'<br/>'+"件数/重量："+data1[i].get("cargoCount")+'<br/>'+"目的地："+data1[i].get("deliveryAddress")+'<br/>'+"保额："+data1[i].get("cargeValue")+'<br/>'+"费率："+data1[i].get("policyRate")+'<br/>'+"保费："+data1[i].get("insuranceFee")+'<br/>'+'<br/>'+'<br/>'
-            sendAlertMail(['zhangliyong-001@cpic.com.cn,dongping.yi@dragonins.com','shuxian.he@dragonins.com'],'【'+datetime.datetime.now().strftime("%Y-%m-%d")+'】'+'--德坤深圳机场山东项目单票投保','您好'+ '<br/>' +'客户投保信息如下起保日期【'+datetime.datetime.now().strftime("%Y-%m-%d")+'】'+'请出具保单。'+'<br/>'+'<br/>' + html)
+            sendAlertMail(['zhangliyong-001@cpic.com.cn','dongping.yi@dragonins.com','shuxian.he@dragonins.com'],'【'+datetime.datetime.now().strftime("%Y-%m-%d")+'】'+'--德坤深圳机场山东项目单票投保','您好'+ '<br/>' +'客户投保信息如下起保日期【'+datetime.datetime.now().strftime("%Y-%m-%d")+'】'+'请出具保单。'+'<br/>'+'<br/>' + html)
             sql = "update RemoteData set ExceptionStatus = '已写入' where deliveryOrderId = '深圳机场山东项目'"
             cursor.execute(sql)   #执行sql语句
             conn.commit() #提交       
