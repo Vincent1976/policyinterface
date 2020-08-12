@@ -1370,7 +1370,7 @@ def getjmpolicy(appkey, billno):
     from models import jm_ht_policy_model
     channelOrderId = ""
     try:
-        remotedata = jm_ht_policy_model.jm_ht_remotedata.query.filter(jm_ht_policy_model.jm_ht_remotedata.appkey==appkey, jm_ht_policy_model.jm_ht_remotedata.shipId==billno).order_by(jm_ht_policy_model.jm_ht_remotedata.CreateDate.desc()).all()
+        remotedata = jm_ht_policy_model.jm_ht_remotedata.query.filter(jm_ht_policy_model.jm_ht_remotedata.appkey==appkey, jm_ht_policy_model.jm_ht_remotedata.shipId==billno,jm_ht_policy_model.jm_ht_remotedata.claimLimit!='LK999999').order_by(jm_ht_policy_model.jm_ht_remotedata.CreateDate.desc()).all()
         dataresult = model_to_dict(remotedata)
         result = {}       
         if len(dataresult) == 0:
