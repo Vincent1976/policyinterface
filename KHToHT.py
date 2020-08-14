@@ -137,7 +137,7 @@ def issueInterface():
             insuranceObject['amount'] = row[18] #
             insuranceObject['rate'] = rate # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
             insuranceObject['effectiveTime'] = str(datetime.datetime.strptime(row[36],'%Y/%m/%d %H:%M:%S')) # 保险起期 departDateTime
-            insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 15)) # 上面时间+15天
+            insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 上面时间+15天
             insuranceObject['copy'] = '1' # 份数 
             insuranceObject['docType'] = '' # 不必填
             insuranceObject['docSN'] = '' # 不必填

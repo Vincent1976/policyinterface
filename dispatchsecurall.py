@@ -26,20 +26,33 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
     except smtplib.SMTPException:
         print('Error: 无法发送邮件')
 
-
-T='2020/4/5'
 conn = pymysql.connect(host="124.70.184.203",user="root",password="7rus7U5!",database="cmal",charset='utf8')
 cursor = conn.cursor() 
 
-log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_dispatchCheck.log',mode='a', encoding='utf-8')
+#约束条件1.2：订单下发时间越早的订单越早安排
+def DataCheck(T):
+    log_file.write('---------------------------订单下发时间越早的订单越早安排 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+
+    sql="select salesid,dispatchno,IFNULL(MAX(DATEDIFF(dispatchsecurall2.deliverydate,dispatchbills.plandate)),0) t from dispatchsecurall2 \
+        LEFT JOIN dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
+		where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY salesid,dispatchno order by dispatchno,salesid"
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    for row in data:
+        salesid=str(row[0])
+        dispatchno=str(row[1])
+        tt=int(row[2])
+        if tt>7:
+            log_file.write('无法在7日内配载,调度单号：'+str(dispatchno)+',商品订单号：'+str(salesid)+',配载日期差：'+str(tt)+'\n')
+            continue
 
 #约束条件1.3：可配载城市数量约束
 def CityCheck(T):
-    log_file.write('---------------------------可配载城市数量约束 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+    log_file.write('\n\n---------------------------可配载城市数量约束 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
 
-    sql="select licenseid,COUNT(distinct dispatchbills.city) as 'citycount',dispatchno from dispatchsecurall \
-        LEFT JOIN (select * from dispatchbills where cast(deliverydate as date)='"+T+"') dispatchbills on dispatchsecurall.licenseid=SUBSTRING(dispatchbills.license,9) \
-        where cast(dispatchsecurall.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
+    sql="select licenseid,COUNT(distinct dispatchbills.city) as 'citycount',dispatchno from dispatchsecurall2 \
+        LEFT JOIN dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
+        where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
     cursor.execute(sql)
     data = cursor.fetchall()
     for row in data:
@@ -50,8 +63,8 @@ def CityCheck(T):
         #调度单号
         dispatchno=str(row[2])
 
-        sql2="select IFNULL(MAX(DATEDIFF(dispatchsecurall.deliverydate,dispatchbills.plandate)),'') as 'citycount' from dispatchbills \
-             LEFT JOIN (select * from dispatchsecurall where licenseid='"+licenseid+"' and cast(dispatchsecurall.deliverydate as date)='"+T+"') dispatchsecurall on dispatchsecurall.licenseid=SUBSTRING(dispatchbills.license,9) \
+        sql2="select IFNULL(MAX(DATEDIFF(dispatchsecurall2.deliverydate,dispatchbills.plandate)),'') as 'citycount' from dispatchbills \
+             LEFT JOIN dispatchsecurall2 on dispatchsecurall2.orderid=dispatchbills.guid \
              where SUBSTRING(dispatchbills.license,9)='"+licenseid+"' and cast(dispatchbills.deliverydate as date)='"+T+"'"
         cursor.execute(sql2)
         data2 = cursor.fetchall()
@@ -78,9 +91,9 @@ def CityCheck(T):
 def AddressCheck(T):
     log_file.write('\n\n---------------------------可配载经销商数量约束 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
 
-    sql="select licenseid,COUNT(distinct dispatchbills.address) as 'addresscount',dispatchno from dispatchsecurall \
-        LEFT JOIN (select * from dispatchbills where cast(deliverydate as date)='"+T+"') dispatchbills on dispatchsecurall.licenseid=SUBSTRING(dispatchbills.license,9) \
-        where cast(dispatchsecurall.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
+    sql="select licenseid,COUNT(distinct dispatchbills.address) as 'addresscount',dispatchno from dispatchsecurall2 \
+        LEFT JOIN dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
+        where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
     cursor.execute(sql)
     data = cursor.fetchall()
     for row in data:
@@ -91,28 +104,28 @@ def AddressCheck(T):
         #调度单号
         dispatchno=str(row[2])
 
-        sql2="select IFNULL(MAX(DATEDIFF(dispatchsecurall.deliverydate,dispatchbills.plandate)),'') as 'addresscount' from dispatchbills \
-             LEFT JOIN (select * from dispatchsecurall where licenseid='"+licenseid+"' and cast(dispatchsecurall.deliverydate as date)='"+T+"') dispatchsecurall on dispatchsecurall.licenseid=SUBSTRING(dispatchbills.license,9) \
+        sql2="select IFNULL(MAX(DATEDIFF(dispatchsecurall2.deliverydate,dispatchbills.plandate)),'') as 'addresscount' from dispatchbills \
+             LEFT JOIN dispatchsecurall2 on dispatchsecurall2.orderid=dispatchbills.guid \
              where SUBSTRING(dispatchbills.license,9)='"+licenseid+"' and cast(dispatchbills.deliverydate as date)='"+T+"'"
         cursor.execute(sql2)
         data2 = cursor.fetchall()
         if len(data2)==0 or str(data2[0][0])=='':
-            log_file.write('可配载城市数为空,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载城市数：'+str(addresscount)+'\n')
+            log_file.write('可配载经销商数量为空,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载城市数：'+str(addresscount)+'\n')
             continue
 
         taddx=int(data2[0][0])
         taddxCK=int(data2[0][0])
         if taddx>=0 and taddx<=2:
-            taddxCK=2
-        elif taddx>=3 and taddx<=4:
             taddxCK=3
-        elif taddx>=5 and taddx<=7:
+        elif taddx>=3 and taddx<=4:
             taddxCK=4
+        elif taddx>=5 and taddx<=7:
+            taddxCK=5
         else:
-            log_file.write('可配载城市数量超标,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载经销商数：'+str(addresscount)+',可配载经销商数(x='+str(taddx)+')：'+str(taddxCK)+'\n')
+            log_file.write('可配载经销商数量超标,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载经销商数：'+str(addresscount)+',可配载经销商数(x='+str(taddx)+')：'+str(taddxCK)+'\n')
             continue
         if addresscount>taddxCK:
-            log_file.write('可配载城市数量超标,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载经销商数：'+str(addresscount)+',可配载经销商数(x='+str(taddx)+')：'+str(taddxCK)+'\n')
+            log_file.write('可配载经销商数量超标,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载经销商数：'+str(addresscount)+',可配载经销商数(x='+str(taddx)+')：'+str(taddxCK)+'\n')
             continue
 
 #约束条件1.5：始发地之间拼车
@@ -156,25 +169,207 @@ def vlimit(T):
 def SalesidCheck(T):
     log_file.write('\n\n---------------------------订单分配策略 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
 
-    sql=" select distinct dispatchbills.salesid from dispatchsecurall left join dispatchbills on dispatchsecurall.orderid=dispatchbills.guid where cast(dispatchsecurall.deliverydate as date)='"+T+"'"
+    sql="select dispatchbills.salesid,dispatchsecurall2.dispatchno from dispatchsecurall2 left join dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
+        where cast(dispatchsecurall2.deliverydate as date)='"+T+"' group by dispatchbills.salesid,dispatchsecurall2.dispatchno order by dispatchsecurall2.dispatchno"
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    for row in data:
+        salesid=str(row[0])
+        dispatchno=str(row[1])
+        sql=" select count(1) from (\
+            select * from dispatchbills where salesid='"+salesid+"' and cast(deliverydate as date)='"+T+"') a left join dispatchsecurall2 on a.guid=dispatchsecurall2.orderid and cast(dispatchsecurall2.deliverydate as date)='"+T+"' \
+            where IFNULL(dispatchsecurall2.guid,'')=''"
+        cursor.execute(sql)
+        data2 = cursor.fetchall()
+        if int(data2[0][0])>0:
+            log_file.write('同一订单当日未全部发运,调度单号：'+dispatchno+',商品订单号：'+str(salesid)+'\n')
+            continue
+
+    sql="select dispatchbills.salesid,dispatchsecurall2.dispatchno,count(distinct dispatchbills.license) from dispatchsecurall2 left join dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
+        where cast(dispatchsecurall2.deliverydate as date)='2020/4/3'\
+        GROUP BY dispatchbills.salesid,dispatchsecurall2.dispatchno,dispatchbills.license HAVING count(distinct dispatchbills.license)>1"
+    cursor.execute(sql)
+    data2 = cursor.fetchall()
+    if len(data2)>0:
+        log_file.write('\n\n---------------------------一张订单包含多辆商品车且装载在多辆板车上的情形---------------------------\n')
+        for row in data2:
+            salesid=str(row[0])
+            dispatchno=str(row[1])
+            count=str(row[2])
+            log_file.write('订单'+str(salesid)+'包含多辆商品车且装载在多辆板车上的情形,调度单号：'+dispatchno+',车,装载板车数：'+str(count)+'\n')
+
+#约束条件2.1：承运车辆（板车）装载数量
+def VcountCheck(T):
+    log_file.write('\n\n---------------------------承运车辆（板车）装载数量 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+
+    sql="select dispatchsecurall2.licenseid,dispatchsecurall2.dispatchno,count(1) from dispatchsecurall2 \
+         where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY dispatchsecurall2.licenseid,dispatchsecurall2.dispatchno order by dispatchsecurall2.dispatchno;"
     cursor.execute(sql)
     data = cursor.fetchall()
 
     for row in data:
-        salesid=str(row[0])
-        sql=" select count(1) from (\
-            select * from dispatchbills where salesid='"+salesid+"' and cast(deliverydate as date)='"+T+"') a left join dispatchsecurall on a.guid=dispatchsecurall.orderid and cast(dispatchsecurall.deliverydate as date)='"+T+"' \
-            where IFNULL(dispatchsecurall.guid,'')=''"
+        licenseid=str(row[0])
+        dispatchno=str(row[1])
+        count=int(row[2])
+        sql="select IFNULL(vcount,'') from dispatchavavehicle2 where license='"+licenseid+"' and cast(deliverydate as date)='"+T+"'"
         cursor.execute(sql)
         data2 = cursor.fetchall()
-        if int(data2[0][0])>0:
-            log_file.write('同一订单当日未全部发运,商品订单号：'+str(salesid)+'\n')
+        if len(data2)==0 or str(data2[0][0])=='':
+            log_file.write('该车无可用车位数 ,调度单号：'+dispatchno+'，车牌号：'+licenseid+',板车配载车辆数：'+str(count)+',可用车位数：无\n')
             continue
+        if count<int(data2[0][0]):
+            log_file.write('可用车辆未满载,调度单号：'+dispatchno+'，车牌号：'+licenseid+',板车配载车辆数：'+str(count)+',可用车位数：'+str(data2[0][0])+'\n')
+            continue
+        sql="select IFNULL(loadcount,'') from dispatchvehicle where licenseid='"+licenseid+"'"
+        cursor.execute(sql)
+        data3 = cursor.fetchall()
+        if len(data3)==0 or str(data3[0][0])=='':
+            log_file.write('该车无可用车位数 ,调度单号：'+dispatchno+'，车牌号：'+licenseid+',板车配载车辆数：'+str(count)+',可用车位数：无\n')
+            continue
+        if count>int(data3[0][0]):
+            log_file.write('超过可用车位数,调度单号：'+dispatchno+'，车牌号：'+licenseid+',板车配载车辆数：'+str(count)+',可用车位数：'+str(data3[0][0])+'\n')
+            continue
+
+#约束条件3.3：承运商线路包及其份额（+当日发运数）
+def LinesCheck(T):
+    log_file.write('\n\n---------------------------未匹配线路包 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+
+    sql="select distinct dispatchsecurall2.cys,dispatchsecurall2.city,dispatchno,dispatchsecurall2.licenseid from dispatchsecurall2 \
+        left join (select linepackage.*, cys, cysshare from linepackage LEFT JOIN linepackage_cys on linepackage_cys.code=code2) linepackage on linepackage.cys=dispatchsecurall2.cys \
+        and linepackage.city=dispatchsecurall2.city where IFNULL(linepackage.guid,'')='' and cast(dispatchsecurall2.deliverydate as date)='"+T+"';"
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    for row in data:
+        cys=str(row[0])
+        city=str(row[1])
+        dispatchno=str(row[2])
+        licenseid=str(row[3])
+        log_file.write('未匹配线路包，调度单号：'+dispatchno+'，车牌号：'+licenseid+'，承运商：'+cys+',城市："'+city+'"\n')
+
+
+    log_file.write('\n\n---------------------------不在同一个线路包内 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+
+    sql="select distinct dispatchsecurall2.cys,dispatchsecurall2.city,dispatchno,dispatchsecurall2.licenseid from dispatchsecurall2 where cast(dispatchsecurall2.deliverydate as date)='"+T+"';"
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    for row in data:
+        cys=str(row[0])
+        city=str(row[1])
+        dispatchno=str(row[2])
+        licenseid=str(row[3])
+
+        sql=" select IFNULL(GROUP_CONCAT(code2),'') from linepackage LEFT JOIN linepackage_cys on linepackage_cys.code=code2 where cys='"+cys+"' and city='"+city+"' GROUP BY code2 HAVING count(1)>1"
+        cursor.execute(sql)
+        data2 = cursor.fetchall()
+        for row in data2:
+            code2=str(row[0][0])
+            log_file.write('不在同一个线路包内，调度单号：'+dispatchno+'，车牌号：'+licenseid+'，承运商：'+cys+',城市："'+city+'",线路包code：'+code2+'\n')
+
+
+    log_file.write('\n\n---------------------------承运商线路包及其份额 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+
+    log_file.write('---------------------------模型前---------------------------\n')
+    sql="select code,cys,cysshare from linepackage_cys"
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    for row in data:
+        code=str(row[0])
+        cys=str(row[1])
+        cysshare=float(row[2])
+        
+        sql="select IFNULL(GROUP_CONCAT(city),'') from linepackage where code2='"+code+"' GROUP BY code2;"
+        cursor.execute(sql)
+        data_city = cursor.fetchall()
+
+        sql="select IFNULL(count(1),'') from dispatchsecurall2 where cys='"+cys+"' and city in (select city from linepackage where code2='"+code+"') \
+            and cast(dispatchsecurall2.deliverydate as date)<='"+T+"' and dispatchno like '%r';"
+        cursor.execute(sql)
+        data_fz = cursor.fetchall()
+        sql="select IFNULL(count(1),'') from dispatchsecurall2 where city in (select city from linepackage where code2='"+code+"') \
+            and cast(dispatchsecurall2.deliverydate as date)<='"+T+"' and dispatchno like '%r';"
+        cursor.execute(sql)
+        data_fm = cursor.fetchall()
+        sql="select IFNULL(count(1),'') from dispatchsecurall2 where cys='"+cys+"' and city in (select city from linepackage where code2='"+code+"') \
+            and cast(dispatchsecurall2.deliverydate as date)='"+T+"' and dispatchno like '%r';"
+        cursor.execute(sql)
+        data_now = cursor.fetchall()
+
+        count_fz=0
+        if len(data_fz)>0 and str(data_fz[0][0])!='':
+            count_fz=float(data_fz[0][0])
+        count_fm=0
+        if len(data_fm)>0 and str(data_fm[0][0])!='':
+            count_fm=float(data_fm[0][0])
+        count_now=0
+        if len(data_now)>0 and str(data_now[0][0])!='':
+            count_now=float(data_now[0][0])
+        if count_fm==0:
+            result=0
+        else:
+            result=round(float(count_fz/count_fm),2)
+        cha=round(float(cysshare-float(result)),2)
+        log_file.write('承运商线路包及其份额，承运商：'+cys+',城市："'+str(data_city[0][0])+'"，调度后线路包执行比例：'+str(cysshare)+',分子：'+str(count_fz)+',分母：'+str(count_fm)+'，shipper占比：'+str(result)+',占比差：'+str(cha)+',当日发运数：'+str(count_now)+'\n')
+
+    log_file.write('---------------------------模型后---------------------------\n')
+    for row in data:
+        code=str(row[0])
+        cys=str(row[1])
+        cysshare=float(row[2])
+
+        sql="select IFNULL(GROUP_CONCAT(city),'') from linepackage where code2='"+code+"' GROUP BY code2;"
+        cursor.execute(sql)
+        data_city = cursor.fetchall()
+        
+        sql="select IFNULL(count(1),'') from dispatchsecurall2 where cys='"+cys+"' and city in (select city from linepackage where code2='"+code+"') \
+            and cast(dispatchsecurall2.deliverydate as date)<='"+T+"' and dispatchno like '%ai';"
+        cursor.execute(sql)
+        data_fz2 = cursor.fetchall()
+        sql="select IFNULL(count(1),'') from dispatchsecurall2 where city in (select city from linepackage where code2='"+code+"') \
+            and cast(dispatchsecurall2.deliverydate as date)<='"+T+"' and dispatchno like '%ai';"
+        cursor.execute(sql)
+        data_fm2 = cursor.fetchall()
+        sql="select IFNULL(count(1),'') from dispatchsecurall2 where cys='"+cys+"' and city in (select city from linepackage where code2='"+code+"') \
+            and cast(dispatchsecurall2.deliverydate as date)='"+T+"' and dispatchno like '%ai';"
+        cursor.execute(sql)
+        data_now2 = cursor.fetchall()
+
+        count_fz2=0
+        if len(data_fz2)>0 and str(data_fz2[0][0])!='':
+            count_fz2=float(data_fz2[0][0])
+        count_fm2=0
+        if len(data_fm2)>0 and str(data_fm2[0][0])!='':
+            count_fm2=float(data_fm[0][0])
+        count_now2=0
+        if len(data_now2)>0 and str(data_now2[0][0])!='':
+            count_now2=float(data_now2[0][0])
+        if count_fm2==0:
+            result2=0
+        else:
+            result2=round(float(count_fz2/count_fm2),2)
+        cha2=round(float(cysshare-float(result2)),2)
+        log_file.write('承运商线路包及其份额，承运商：'+cys+',城市：“'+str(data_city[0][0])+'”，调度后线路包执行比例：'+str(cysshare)+',分子：'+str(count_fz2)+',分母：'+str(count_fm2)+'，shipper占比：'+str(result2)+',占比差：'+str(cha2)+',当日发运数：'+str(count_now2)+'\n')
 
 if __name__ == "__main__":
     try:
-        CityCheck(T)
-        AddressCheck(T)
+        start=datetime.datetime.strptime('2020/4/10','%Y/%m/%d')
+        end=datetime.datetime.strptime('2020/6/5','%Y/%m/%d')
+        
+        while start<=end:
+            T=str(start.strftime('%Y/%m/%d'))
+
+            log_file = open('logs/' + T.replace('/','_') +'_'+datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")+'.log',mode='a', encoding='utf-8')
+            log_file.write('---------------------------T = '+T+'---------------------------\n\n')
+
+            DataCheck(T)
+            CityCheck(T)
+            AddressCheck(T)
+            vlimit(T)
+            SalesidCheck(T)
+            VcountCheck(T)
+            LinesCheck(T)
+
+            start+=datetime.timedelta(days=1)
+
         print('-----约束检查已完成，请查看结果文件')
     except Exception as err:
         traceback.print_exc()
