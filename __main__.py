@@ -1444,7 +1444,7 @@ def postInsurer_HT(guid):
         insuranceCode=RBProductInfo[0]['MainGlausesCode'] #险种代码
         insuranceName=RBProductInfo[0]['MainGlauses'] #险种名称
         effectivTime=datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") #保险起期
-        terminalTime=(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")+datetime.timedelta(days=2)).strftime("%Y-%m-%d") #保险止期
+        terminalTime=(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")+datetime.timedelta(days=30)).strftime("%Y-%m-%d") #保险止期
         copy="1" #份数
         signTM=datetime.datetime.now().strftime("%Y-%m-%d") #签单时间
 
