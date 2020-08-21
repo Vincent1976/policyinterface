@@ -639,7 +639,7 @@ def issueInterface(guid):
         channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
 
         insuranceObject = {}
-        insuranceObject["insuranceCode"] = '362205' # 险种代码
+        # insuranceObject["insuranceCode"] = '362205' # 险种代码
         insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
         insuranceObject['plan'] = 'A' # 款别
         insuranceObject['srcCPlyNo'] = '' # 不必填
@@ -648,8 +648,17 @@ def issueInterface(guid):
         insuranceObject['amtCur'] = '01'
         insuranceObject['amount'] = '12000.0' 
         insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-        insuranceObject['effectiveTime'] = row[36] # 保险起期 departDateTime           
-        insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 上面时间+30天
+        productid = row[17] # 产品编号
+        if productid == "LK801001":
+            now = datetime.datetime.now()
+            insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
+            insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 保期30天
+            insuranceObject["insuranceCode"] = '3621'
+        if productid == "LK801002":
+            insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
+            insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 2)) # 保险至期+2天
+            insuranceObject["insuranceCode"] = '3622'
+
         insuranceObject['copy'] = '1' # 份数 
         insuranceObject['docType'] = '' # 不必填
         insuranceObject['docSN'] = '' # 不必填
@@ -737,7 +746,8 @@ def issueInterface(guid):
         # print(signmd5)
 
         #写入日志
-        log_file = open('logs/' + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") +'_SSDtoHT.log',mode='a', encoding='utf-8')
+    
+        log_file = open('logs/' + guid +'_ssdpolicy.log',mode='a', encoding='utf-8')
         log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
         log_file.write(str(Json)+'\n')
         #log_file.write(signmd5)
@@ -819,7 +829,7 @@ def ssdpolicy():
         
         newguid = str(uuid.uuid1())
         #写入日志
-        log_file = open('logs/' + newguid +'_ssdpolicy.log',mode='a')
+        log_file = open('logs/' + newguid +'_ssdpolicy.log',mode='a', encoding='utf-8')
         log_file.write('---------------------------收到客户报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
         log_file.write(str(postdata) + '\n')
         log_file.close()
@@ -1004,15 +1014,33 @@ def ssdpolicy():
             m3 = decimal.Decimal(str(decimal.Decimal(policymodel.cargeValue))) - decimal.Decimal(str(decimal.Decimal(product_maxAmount)))
             if m3 > 0 :
                 raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
+        
             # 如果触发最低保费，则不校验费率，否则需校验
-        if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
-            # 保费=保额*费率
-            _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
-            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))
-            if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
-                raise Exception("保费计算有误")
-        else:
-            raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
+        # if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
+        #     # 保费=保额*费率
+        #     _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
+        #     _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))
+        #     if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
+        #         raise Exception("保费计算有误")
+        # else:
+        #     raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
+
+        # 产品编号校验
+        if policymodel.claimLimit == "LK801001":
+            if float(policymodel.insuranceFee) != 25.00:
+                raise Exception("保费只能是25.00")
+            policymodel.cargeValue == "10万"
+            
+        if policymodel.claimLimit == "LK801002":
+            if float(policymodel.insuranceFee) != 1.00:
+                raise Exception("保费只能是1.00")
+            policymodel.cargeValue == "10万"
+        
+            
+
+
+
+
         
         policymodel.save()
 
@@ -1045,9 +1073,14 @@ def ssdpolicy():
         result['premium'] = ''
         result['policyno'] = ''
         result['downloadurl'] = ''
+
+        log_file = open('logs/' + newguid +'_ssdpolicy.log',mode='a',encoding='utf-8')
+        log_file.write('---------------------------沙师弟报错信息 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(err))
+        log_file.close()
+        sendAlertMail('manman.zhang@dragonins.com','沙师弟—华泰投递出错',str(err)+'<br />' + str(postdata))
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
-
 
 # 德坤接口
 @app.route('/dekun', methods = ['POST'])
