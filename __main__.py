@@ -1428,7 +1428,7 @@ def getjmpolicy(appkey, billno):
         result['appkey'] = appkey
         result['sequencecode'] = channelOrderId
         result['premium'] = dataresult[0]['insuranceFee']
-        result['policyno'] = dataresult[0]['policyNo']
+        result['policyno'] = dataresult[0]['policySolutionID']
         result['downloadurl'] = dataresult[0]['relationType']
         return json.dumps(result)
     except Exception as err:
