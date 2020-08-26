@@ -621,7 +621,7 @@ def getlog_jm():
     return send_from_directory(os.path.join(directory, 'uwsgi'), filename, as_attachment=True)
     #return send_file('/root/wwwroot/policyinterface/uwsgi/uwsgi.log')
 
-# 华泰出单接口
+# 华泰出单接口(沙师弟)
 def issueInterface(guid):
     from dals import dal
     from urllib import parse
@@ -633,7 +633,9 @@ def issueInterface(guid):
         postdata={}
         channelObject = {}
         channelObject["bizCode"]= '121' # 交易类型
-        channelObject["channelCode"]='100189' # 渠道编码
+      
+
+        # channelObject["channelCode"]='100189' # 渠道编码
         channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
         channelObject["orderId"]= row[14] # 订单号 shipid
         channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
@@ -641,64 +643,71 @@ def issueInterface(guid):
         insuranceObject = {}
         # insuranceObject["insuranceCode"] = '362205' # 险种代码
         insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
-        insuranceObject['plan'] = 'A' # 款别
+        # insuranceObject['plan'] = 'A' # 款别
         insuranceObject['srcCPlyNo'] = '' # 不必填
         insuranceObject['prmCur'] = '01' 
         insuranceObject['premium'] = row[21] # 保险费
         insuranceObject['amtCur'] = '01'
-        insuranceObject['amount'] = '12000.0' 
+        insuranceObject['amount'] = '12000.0'
+
+        # 测试环境
+        # insuranceObject["insuranceCode"] = '362208' # 险种代码
+        channelObject["channelCode"]='100197' # 渠道编码
+        key = "123456@HT" # 线下提供的密钥
+
         insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
         productid = row[17] # 产品编号
         if productid == "LK801001":
             now = datetime.datetime.now()
             insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 保期30天
+            insuranceObject['plan'] = 'B' # 款别
             insuranceObject["insuranceCode"] = '3621'
+
         if productid == "LK801002":
             insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 2)) # 保险至期+2天
+            insuranceObject['plan'] = 'A' # 款别
             insuranceObject["insuranceCode"] = '3622'
-
+            
         insuranceObject['copy'] = '1' # 份数 
         insuranceObject['docType'] = '' # 不必填
         insuranceObject['docSN'] = '' # 不必填
 
         # 需要提供开票的六项信息
         appntObject = {}
-        appntObject["appName"] = row[3] # 投保人姓名 custCoName
+        # appntObject["appName"] = row[3] # 投保人姓名 custCoName
+        appntObject["appName"] = '沙师弟（重庆）网络科技有限公司及其子公司、分公司' # 投保人名称
         appntObject["appType"] = '2' 
         # appntObject["appBirthday"] = '' # 不必填
         appntObject["appEmail"] = '' # 不必填
         appntObject["appGender"] = '' # 不必填
         appntObject["appIDType"] = '97' 
-        if appntObject["appName"] == '杭州钱江物流有限公司':
-            appntObject["appNumber"] = '91330102727621887N'# 被保人证件号
-        elif appntObject["appName"] == '杭州汉盛物流有限公司':
-            appntObject["appNumber"] = '91330182322907190D'# 被保人证件号
-        else:
-            appntObject["appNumber"] = '不详'# 被保人证件号
-        appntObject["appTelNumber"] = row[82] # 投保人电话号
-        appntObject["appAddr"] = row[86]# 地址信息
-        appntObject["appContact"] = row[74] # 联系人名字
+
+        appntObject["appNumber"] = row[79] # 投保人证件号(取validinsured表的CertfCde字段)
+
+        appntObject["appTelNumber"] = row[82] # 投保人电话号(取validinsured表的tel字段)
+        appntObject["appAddr"] = row[86]# 地址信息(取validinsured表的DetailAddress字段)
+
+        appntObject["appContact"] = "王植" # 联系人名字
         appntObject["isTaxInvoice"] = '1' 
-        appntObject["taxCertifi"] = row[79] # 税务登记证号
+        appntObject["taxCertifi"] = row[79] # 税务登记证号(取validinsured表的CertfCde字段)
         appntObject["depositBank"] = row[78] # 开户银行
         appntObject["bankAccount"] = row[77] # 银行账户
 
         insuredObject = {}
-        insuredObject["insuredName"] = row[9] # 被保险人名称
+        # insuredObject["insuredName"] = row[9] # 被保险人名称
+        insuredObject["insuredName"] = '沙师弟（重庆）网络科技有限公司及其子公司、分公司' # 被保险人名称
         insuredObject["insuredType"] = '2' # 
         insuredObject["insuredEmail"] = '' # 不必填
         insuredObject["InsuredGender"] = '' # 不必填
         insuredObject["insuredIDType"] = '06' # 被保人证件类型
-        if insuredObject["insuredName"] == '杭州钱江物流有限公司':
-            insuredObject["insuredNumber"] = '91330102727621887N'# 被保人证件号
-        elif insuredObject["insuredName"] == '杭州汉盛物流有限公司':
-            insuredObject["insuredNumber"] = '91330182322907190D'# 被保人证件号
-        else:
-                insuredObject["insuredNumber"] = '不详'# 被保人证件号
-        insuredObject["insuredTelNumber"] = '不详' # 被保险人电话
-        insuredObject["insuredAddress"] = '' # 不必填
+
+
+        insuredObject["insuredNumber"] = appntObject["appNumber"]# 被保人证件号
+
+        insuredObject["insuredTelNumber"] = appntObject["appTelNumber"] # 被保险人电话
+        insuredObject["insuredAddress"] = appntObject["appAddr"] # 不必填
         insuredObject["relationship"] = '' # 不必填
         insuredObject["isLegal"] = '1' # 
         definedSafeObj = {}
@@ -721,11 +730,23 @@ def issueInterface(guid):
         productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
         productDiffObject["goodsPack"] = '08' # 包装方式
         productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
+
+        productDiffObject["goodsType"] = "SX001420" # 货物大类？？？
+        productDiffObject["goodsTypeSec"] = "" # 二级货物明细
+        
         productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
         productDiffObject["transDepot"] = row[46] # 中转地
         productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
         productDiffObject["transDate"] = row[36] # 起运日期
-        productDiffObject["transportCost"] = row[18] # 运费
+
+        if productid == "LK801001": # 客户投保30天的期单
+            productDiffObject["transportCost"] = ""
+
+        if productid == "LK801002": # 次单
+            productDiffObject["transportCost"] = row[18] # 运费
+
+        productDiffObject["insuredContact"] = row[9] # 被保人联系人
+        productDiffObject["insuredTel"] = row[7] # 被保人联系方式
 
         postdata["channelObject"] = channelObject
         postdata["insuranceObject"] = insuranceObject
@@ -806,7 +827,6 @@ def issueInterface(guid):
         sql = "UPDATE ssd_ht_remotedata SET Status='%s', errLog='%s', bizContent='%s', custId='%s',relationType='%s' WHERE guid='%s'" %(_Status, _Msg, _InsurancePolicy, _orderId, _PdfURL, guid)
         dal.SQLHelper.update(sql,None)
         return _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag
-
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err)
@@ -1034,16 +1054,8 @@ def ssdpolicy():
         if policymodel.claimLimit == "LK801002":
             if float(policymodel.insuranceFee) != 1.00:
                 raise Exception("保费只能是1.00")
-            policymodel.cargeValue == "10万"
-        
-            
-
-
-
-
-        
+            policymodel.cargeValue == "10万"  
         policymodel.save()
-
         # 投递保险公司 或 龙琨编号
 
         _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = issueInterface(newguid)     
