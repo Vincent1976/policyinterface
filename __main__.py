@@ -390,7 +390,8 @@ def jmpolicy():
         policymodel.channelOrderId = postdata['sequencecode']
         cust_sequencecode = postdata['sequencecode']
         policymodel.policyNo = postdata['solutionid']
-        policymodel.claimLimit = postdata['productid']
+        policymodel.claimLimit = postdata['productid']       
+
         action = postdata['action']  
         policymodel.Status = '等待投保'
         policymodel.CreateDate = datetime.datetime.now()
@@ -572,26 +573,29 @@ def jmpolicy():
                 raise Exception("保费计算有误")
         else:
             raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
-        
+
+        if policymodel.claimLimit == "LK999999":
+            policymodel.Status = '测试数据'
         policymodel.save()
 
+        if policymodel.claimLimit != "LK999999":
         # 投递保险公司 或 龙琨编号
-        _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
-
-        if _Flag == "1":
-            _Msg = "投保成功"
-        result = {}
-        result['responsecode'] = _Flag
-        result['responsemessage'] = _Msg
-        result['applicationserial'] = newguid
-        result['appkey'] = policymodel.appkey
-        result['sequencecode'] = policymodel.channelOrderId
-        result['premium'] = policymodel.insuranceFee
-        result['policyno'] = _InsurancePolicy
-        result['downloadurl'] = _PdfURL
-        resultReturn = json.dumps(result)
-        return json.loads(resultReturn)
-
+            _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
+            if _Flag == "1":
+                _Msg = "投保成功"
+            result = {}
+            result['responsecode'] = _Flag
+            result['responsemessage'] = _Msg
+            result['applicationserial'] = newguid
+            result['appkey'] = policymodel.appkey
+            result['sequencecode'] = policymodel.channelOrderId
+            result['premium'] = policymodel.insuranceFee
+            result['policyno'] = _InsurancePolicy
+            result['downloadurl'] = _PdfURL
+            resultReturn = json.dumps(result)
+            return json.loads(resultReturn)
+        else:
+            return "测试数据暂不投保"
     except Exception as err:
         traceback.print_exc()
         result = {}
