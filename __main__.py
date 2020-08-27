@@ -574,28 +574,25 @@ def jmpolicy():
         else:
             raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
 
-        if policymodel.claimLimit == "LK999999":
-            policymodel.Status = '测试数据'
+        
         policymodel.save()
 
-        if policymodel.claimLimit != "LK999999":
         # 投递保险公司 或 龙琨编号
-            _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
-            if _Flag == "1":
-                _Msg = "投保成功"
-            result = {}
-            result['responsecode'] = _Flag
-            result['responsemessage'] = _Msg
-            result['applicationserial'] = newguid
-            result['appkey'] = policymodel.appkey
-            result['sequencecode'] = policymodel.channelOrderId
-            result['premium'] = policymodel.insuranceFee
-            result['policyno'] = _InsurancePolicy
-            result['downloadurl'] = _PdfURL
-            resultReturn = json.dumps(result)
-            return json.loads(resultReturn)
-        else:
-            return "测试数据暂不投保"
+        _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
+        if _Flag == "1":
+            _Msg = "投保成功"
+        result = {}
+        result['responsecode'] = _Flag
+        result['responsemessage'] = _Msg
+        result['applicationserial'] = newguid
+        result['appkey'] = policymodel.appkey
+        result['sequencecode'] = policymodel.channelOrderId
+        result['premium'] = policymodel.insuranceFee
+        result['policyno'] = _InsurancePolicy
+        result['downloadurl'] = _PdfURL
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)
+    
     except Exception as err:
         traceback.print_exc()
         result = {}
@@ -931,7 +928,7 @@ def ssdpolicy():
         if policymodel.shipperId == "":
             exMessage += "insuredidnumber不能为空;"
 
-        if policymodel.claimLimit != "LK801001": # 产品编号为LK801001时 保额，费率不校验
+        if policymodel.claimLimit != "LK801001": # 产品编号为LK801001时不校验
             if policymodel.shipId == "":
                 exMessage += "originaldocumentnumber不能为空;"            
             if policymodel.cargeValue == "":
@@ -1740,6 +1737,8 @@ def postInsurer_HT(guid):
             _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
             _PdfURL = resultNode.getElementsByTagName("PdfURL")[0].childNodes[0].data    
             _Status = "投保成功"
+            if productNo == "LK999999":
+                _Status = '测试数据'
         else: # 投保失败
             _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
             _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
