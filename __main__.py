@@ -910,8 +910,8 @@ def ssdpolicy():
             exMessage += "appkey不能为空;"
         if policymodel.bizContent == "":
             exMessage += "usercode不能为空;"
-        if policymodel.policyNo == "":
-            exMessage += "solutionid不能为空;"
+        # if policymodel.policyNo == "":
+        #     exMessage += "solutionid不能为空;"
         if policymodel.channelOrderId == "":
             exMessage += "sequencecode不能为空;"
         if policymodel.claimLimit == "":
@@ -936,8 +936,8 @@ def ssdpolicy():
                 exMessage += "originaldocumentnumber不能为空;"            
             if policymodel.cargeValue == "":
                 exMessage += "policyamount不能为空;"
-            if policymodel.policyRate == "":
-                exMessage += "rate不能为空;"
+            # if policymodel.policyRate == "":
+            #     exMessage += "rate不能为空;"
             if policymodel.departSpot == "":
                 exMessage += "startaddress不能为空;"
             if policymodel.deliveryAddress == "":
