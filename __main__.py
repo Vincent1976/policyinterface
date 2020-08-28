@@ -452,8 +452,8 @@ def jmpolicy():
             exMessage += "sequencecode不能为空;"
         if policymodel.claimLimit == "":
             exMessage += "productid不能为空;"
-        if action == "":
-            exMessage += "action不能为空;"
+        # if action == "":
+        #     exMessage += "action不能为空;"
         if policymodel.custCoName == "":
             exMessage += "applicantname不能为空;"                        
         if policymodel.custProperty == "":
@@ -497,10 +497,10 @@ def jmpolicy():
             exMessage += "运单号或者车牌号至少一个必填;"
         if policymodel.trafficType == "":
             exMessage += "transportmodecode不能为空;"
-        if policymodel.departSpot == "":
-            exMessage += "startaddress不能为空;"
-        if policymodel.deliveryAddress == "":
-            exMessage += "endaddress不能为空;"
+        # if policymodel.departSpot == "":
+        #     exMessage += "startaddress不能为空;"
+        # if policymodel.deliveryAddress == "":
+        #     exMessage += "endaddress不能为空;"
         if policymodel.cargoName == "":
             exMessage += "descriptionofgoods不能为空;"
         if policymodel.cargoType == "":
@@ -1517,12 +1517,12 @@ def postInsurer_HT(guid):
         fromCountry="HTC01" #起运地国家（编码）
 
         ######起运地国家（编码）/起运地
-        fromArea=remotedata[0]['departProvince']+remotedata[0]['departCity']+remotedata[0]['departDistrict'] #起运地 
+        fromArea=remotedata[0]['departProvince']+remotedata[0]['departCity']+remotedata[0]['departDistrict'] + remotedata[0]['departSpot'] #起运地 
         passPort="" #途径港S
         toContry="HTC01" #目的地国家 （编码）
 
         ######目的地国家（编码）/目的地
-        toArea=remotedata[0]['destinationProvice']+remotedata[0]['destinationCity']+remotedata[0]['destinationDistrict'] #目的地  
+        toArea=remotedata[0]['destinationProvice']+remotedata[0]['destinationCity']+remotedata[0]['destinationDistrict']+remotedata[0]['deliveryAddress'] #目的地  
         surveyAdrID=RBProductInfo[0]['Additive'] #查勘地址编码
         surveyAdr="" #查勘地址内容 
         trantsTool="" #转运工具
