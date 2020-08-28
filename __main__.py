@@ -507,6 +507,8 @@ def jmpolicy():
             exMessage += "cargotype不能为空;"
         if policymodel.cargoCount == "":
             exMessage += "packagequantity不能为空;"
+        if exMessage !="":
+            raise Exception(exMessage)
 
         #单据唯一性
         remotedata = policy_model.jm_ht_remotedata.query.filter(policy_model.jm_ht_remotedata.appkey==postdata['appkey'], policy_model.jm_ht_remotedata.Status=='投保成功', policy_model.jm_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.jm_ht_remotedata.CreateDate.desc()).all()
@@ -666,7 +668,7 @@ def issueInterface(guid):
             insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 2)) # 保险至期+2天
             insuranceObject['plan'] = 'A' # 款别
-            insuranceObject["insuranceCode"] = '3622'
+            insuranceObject["insuranceCode"] = '362208'
             
         insuranceObject['copy'] = '1' # 份数 
         insuranceObject['docType'] = '' # 不必填
@@ -720,13 +722,14 @@ def issueInterface(guid):
         productDiffObject["vehicleModel"] = '*'
         productDiffObject["vehicleLen"] = '*'
         productDiffObject["vehicleFrameNum"] = '*' 
-        productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
+        productDiffObject["goodsName"] = str(row[27])+',运单号：'+ str(row[14]) # 货物名称 cargoName
+
         productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
         productDiffObject["goodsPack"] = '08' # 包装方式
         productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
 
-        productDiffObject["goodsType"] = "SX001420" # 货物大类？？？
-        productDiffObject["goodsTypeSec"] = "" # 二级货物明细
+        productDiffObject["goodsType"] = "SX001423" # 货物大类
+        productDiffObject["goodsTypeSec"] = "SX00140105" # 二级货物明细
         
         productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
         productDiffObject["transDepot"] = row[46] # 中转地
@@ -973,7 +976,10 @@ def ssdpolicy():
         if policymodel.licenseId =="":
             exMessage += "车牌号不能为空;"
         if policymodel.trafficType == "":
-            exMessage += "transportmodecode不能为空;"
+            exMessage += "transportmodecode不能为空;"  
+
+        if exMessage !="":
+            raise Exception(exMessage)
 
         #单据唯一性
         remotedata = policy_model.ssd_ht_remotedata.query.filter(policy_model.ssd_ht_remotedata.appkey==postdata['appkey'],policy_model.ssd_ht_remotedata.Status == '投保成功', policy_model.ssd_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.ssd_ht_remotedata.CreateDate.desc()).all()
