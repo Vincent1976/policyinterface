@@ -947,9 +947,22 @@ def ssdpolicy():
             if policymodel.cargoType == "":
                 exMessage += "cargotype不能为空;"
             if policymodel.cargoCount == "":
-                exMessage += "packagequantity不能为空;"        
+                exMessage += "packagequantity不能为空;" 
+            if policymodel.departDateTime == "":
+                exMessage += "insuredatetime不能为空;"
+            else:        
+                if len(policymodel.departDateTime) != 14:
+                    raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
+                else:                   
+                    # 倒签单校验
+                    departDateTimes = policymodel.departDateTime
+                    policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
+                    time = int(departDateTimes)+10000 # 加10000相当于一个小时
+                    now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+                
+                    if time - now < 100: # 100相当于小于1分钟
+                        exMessage += "当前不允许倒签单;"       
                     
-
         if policymodel.termContent == "":
             exMessage += "deductible不能为空;"
         if policymodel.insuranceFee == "":
@@ -958,20 +971,7 @@ def ssdpolicy():
             exMessage += "insurancecoveragename不能为空;"
         if policymodel.mpRelation == "":
             exMessage += "chargetypecode不能为空;"
-        if policymodel.departDateTime == "":
-            exMessage += "insuredatetime不能为空;"
-        else:        
-            if len(policymodel.departDateTime) != 14:
-                raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
-            else:                   
-                # 倒签单校验
-                departDateTimes = policymodel.departDateTime
-                policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
-                time = int(departDateTimes)+10000 # 加10000相当于一个小时
-                now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
-                
-                if time - now < 100: # 100相当于小于1分钟
-                    exMessage += "当前不允许倒签单;"
+   
                 
         if policymodel.licenseId =="":
             exMessage += "车牌号不能为空;"
