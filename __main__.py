@@ -446,8 +446,8 @@ def jmpolicy():
             exMessage += "appkey不能为空;"
         if policymodel.bizContent == "":
             exMessage += "usercode不能为空;"
-        if policymodel.policyNo == "":
-            exMessage += "solutionid不能为空;"
+        # if policymodel.policyNo == "":
+        #     exMessage += "solutionid不能为空;"
         if policymodel.channelOrderId == "":
             exMessage += "sequencecode不能为空;"
         if policymodel.claimLimit == "":
