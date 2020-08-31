@@ -635,7 +635,7 @@ def issueInterface(guid):
         row = dal.SQLHelper.fetch_one(sql,None)
         postdata={}
         channelObject = {}
-        channelObject["bizCode"]= '121' # 交易类型
+        channelObject["bizCode"]= '101' # 交易类型
       
         channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
         channelObject["orderId"]= row[0]  # guid 
@@ -661,7 +661,7 @@ def issueInterface(guid):
             now = datetime.datetime.now()
             insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 保期30天
-            insuranceObject['plan'] = 'B' # 款别
+            insuranceObject['plan'] = 'A' # 款别
             insuranceObject["insuranceCode"] = '362104' # 险种代码
 
         if productid == "LK801002":
