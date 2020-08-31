@@ -637,13 +637,11 @@ def issueInterface(guid):
         channelObject = {}
         channelObject["bizCode"]= '101' # 交易类型
       
-        channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
         channelObject["orderId"]= row[0]  # guid 
         channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
 
         insuranceObject = {}
-        insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
-        # insuranceObject['plan'] = 'A' # 款别
+        insuranceObject['plan'] = 'A' # 款别
         insuranceObject['srcCPlyNo'] = '' # 不必填
         insuranceObject['prmCur'] = '01' 
         insuranceObject['premium'] = row[21] # 保险费
@@ -654,21 +652,28 @@ def issueInterface(guid):
         # insuranceObject["insuranceCode"] = '362208' # 险种代码
         channelObject["channelCode"]='100197' # 渠道编码
         key = "123456@HT" # 线下提供的密钥
+        channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+        insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
+        url="http://219.141.242.74:9039/service_platform/InsureInterface"
+
+        # 正式环境
+
+
+
 
         # insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-        productid = row[17] # 产品编号
-        if productid == "LK801001":
+        productid = row[17] # 产品编号       
+        if productid == "LK801001":    
             now = datetime.datetime.now()
             insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 保期30天
-            insuranceObject['plan'] = 'A' # 款别
             insuranceObject["insuranceCode"] = '362104' # 险种代码
 
         if productid == "LK801002":
             insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 2)) # 保险至期+2天
-            insuranceObject['plan'] = 'A' # 款别
             insuranceObject["insuranceCode"] = '362208'
+    
             
         insuranceObject['copy'] = '1' # 份数 
         insuranceObject['docType'] = '' # 不必填
@@ -735,7 +740,6 @@ def issueInterface(guid):
         productDiffObject["transDepot"] = row[46] # 中转地
         productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
         productDiffObject["transDate"] = row[36] # 起运日期
-
         if productid == "LK801001": # 客户投保30天的期单
             productDiffObject["transportCost"] = ""
 
@@ -755,7 +759,7 @@ def issueInterface(guid):
         postdata["productDiffObject"] = productDiffObject
         Json = json.dumps(postdata, ensure_ascii=False)
         Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
-        # print(Json)          
+        print(Json)          
         key = "123456@HT" # 线下提供的密钥
         m = hashlib.md5()
         b = (str(Json2) + key).encode(encoding='utf-8')
@@ -770,8 +774,7 @@ def issueInterface(guid):
         log_file.write(str(Json)+'\n')
         #log_file.write(signmd5)
             
-        #post出单接口请求
-        url="http://219.141.242.74:9039/service_platform/InsureInterface"
+        
         # 通过字典方式定义请求body
         FormData = {"json": str(Json), "channelCode": str(channelObject["channelCode"]), "signature": str(signmd5)}
         data = parse.urlencode(FormData)
@@ -1038,11 +1041,12 @@ def ssdpolicy():
         # 产品编号校验
         if policymodel.claimLimit == "LK801001":
             if float(policymodel.insuranceFee) != 25.00:
-                raise Exception("30天期单的保费固定为25.00元")            
-            
-        if policymodel.claimLimit == "LK801002":
+                raise Exception("30天期单的保费固定为25.00元")                  
+        elif policymodel.claimLimit == "LK801002":
             if float(policymodel.insuranceFee) != 1.00:
                 raise Exception("次单的保费固定为1.00元")
+        else:
+            raise Exception("测试环境暂时关闭")
         
         policymodel.save()
         # 投递保险公司 或 龙琨编号
