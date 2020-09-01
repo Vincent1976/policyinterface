@@ -662,9 +662,9 @@ def issueInterface(guid):
             channelObject["channelName"]='上海励琨-沙师弟' # 渠道名称
             insuranceObject["insuranceName"] = '上海励琨-沙师弟公路承运险 ' # 产品名称
             url="http://219.141.242.74:9004/service_platform/InsureInterface"
-            
+
         # insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-        if productid == "LK801001":    
+        if productid == "LK801001" or productid =="LK999999":    
             now = datetime.datetime.now()
             insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 保期30天
@@ -741,7 +741,7 @@ def issueInterface(guid):
         productDiffObject["transDepot"] = row[46] # 中转地
         productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
         productDiffObject["transDate"] = row[36] # 起运日期
-        if productid == "LK801001": # 客户投保30天的期单
+        if productid == "LK801001" or productid =="LK999999": # 客户投保30天的期单
             productDiffObject["transportCost"] = ""
 
         if productid == "LK801002": # 次单
