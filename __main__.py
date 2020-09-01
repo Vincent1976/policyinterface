@@ -647,27 +647,23 @@ def issueInterface(guid):
         insuranceObject['premium'] = row[21] # 保险费
         insuranceObject['amtCur'] = '01'
         insuranceObject['amount'] = '100000.0'
-
-        # 测试环境
-        # channelObject["channelCode"]='100197' # 渠道编码
-        # key = "123456@HT" # 线下提供的密钥
-        # channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
-        # insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
-        # url="http://219.141.242.74:9039/service_platform/InsureInterface"
-
-        # 正式环境
-        channelObject["channelCode"]='100197' # 渠道编码
-        key = "shlkssd2020@HT" # 线下提供的密钥
-        channelObject["channelName"]='上海励琨-沙师弟' # 渠道名称
-        insuranceObject["insuranceName"] = '上海励琨-沙师弟公路承运险 ' # 产品名称
-        url="http://219.141.242.74:9004/service_platform/InsureInterface"
-
-
-
-
-
+        productid = row[17] # 产品编号 
+        if productid =="LK999999":
+            # 测试环境
+            channelObject["channelCode"]='100197' # 渠道编码
+            key = "123456@HT" # 线下提供的密钥
+            channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+            insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
+            url="http://219.141.242.74:9039/service_platform/InsureInterface"
+        else:
+            # 正式环境
+            channelObject["channelCode"]='100197' # 渠道编码
+            key = "shlkssd2020@HT" # 线下提供的密钥
+            channelObject["channelName"]='上海励琨-沙师弟' # 渠道名称
+            insuranceObject["insuranceName"] = '上海励琨-沙师弟公路承运险 ' # 产品名称
+            url="http://219.141.242.74:9004/service_platform/InsureInterface"
+            
         # insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-        productid = row[17] # 产品编号       
         if productid == "LK801001":    
             now = datetime.datetime.now()
             insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
@@ -1044,14 +1040,22 @@ def ssdpolicy():
         #         raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
 
         # 产品编号校验
+        # if policymodel.claimLimit == "LK801001":
+        #     if float(policymodel.insuranceFee) != 25.00:
+        #         raise Exception("30天期单的保费固定为25.00元")                  
+        # elif policymodel.claimLimit == "LK801002":
+        #     if float(policymodel.insuranceFee) != 1.00:
+        #         raise Exception("次单的保费固定为1.00元")
+        # else:
+        #     raise Exception("测试环境暂时关闭")
+
         if policymodel.claimLimit == "LK801001":
             if float(policymodel.insuranceFee) != 25.00:
                 raise Exception("30天期单的保费固定为25.00元")                  
-        elif policymodel.claimLimit == "LK801002":
+        if policymodel.claimLimit == "LK801002":
             if float(policymodel.insuranceFee) != 1.00:
                 raise Exception("次单的保费固定为1.00元")
-        else:
-            raise Exception("测试环境暂时关闭")
+
         
         policymodel.save()
         # 投递保险公司 或 龙琨编号
