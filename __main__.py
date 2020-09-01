@@ -649,14 +649,19 @@ def issueInterface(guid):
         insuranceObject['amount'] = '100000.0'
 
         # 测试环境
-        # insuranceObject["insuranceCode"] = '362208' # 险种代码
-        channelObject["channelCode"]='100197' # 渠道编码
-        key = "123456@HT" # 线下提供的密钥
-        channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
-        insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
-        url="http://219.141.242.74:9039/service_platform/InsureInterface"
+        # channelObject["channelCode"]='100197' # 渠道编码
+        # key = "123456@HT" # 线下提供的密钥
+        # channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+        # insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
+        # url="http://219.141.242.74:9039/service_platform/InsureInterface"
 
         # 正式环境
+        channelObject["channelCode"]='100197' # 渠道编码
+        key = "shlkssd2020@HT" # 线下提供的密钥
+        channelObject["channelName"]='上海励琨-沙师弟' # 渠道名称
+        insuranceObject["insuranceName"] = '上海励琨-沙师弟公路承运险 ' # 产品名称
+        url="http://219.141.242.74:9004/service_platform/InsureInterface"
+
 
 
 
@@ -672,7 +677,7 @@ def issueInterface(guid):
         if productid == "LK801002":
             insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 2)) # 保险至期+2天
-            insuranceObject["insuranceCode"] = '362208'
+            insuranceObject["insuranceCode"] = '362208' 
     
             
         insuranceObject['copy'] = '1' # 份数 
