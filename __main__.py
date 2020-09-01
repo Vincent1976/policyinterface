@@ -842,6 +842,7 @@ def ssdpolicy():
     from models import GJXXPT_Product_model
     from dals import dal
     from models import ValidInsured_model
+    import time
 
     try:
         # 获取请求 
@@ -960,13 +961,17 @@ def ssdpolicy():
                 else:                   
                     # 倒签单校验
                     departDateTimes = policymodel.departDateTime
-                    policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
-                    time = int(departDateTimes)+10000 # 加10000相当于一个小时
-                    now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
-                
-                    if time - now < 100: # 100相当于小于1分钟
-                        exMessage += "当前不允许倒签单;"       
-                    
+                    try:
+                        time.strptime(departDateTimes, "%Y%m%d%H%M%S") # 校验日期是否合法
+                        policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
+                        time = int(departDateTimes)+10000 # 加10000相当于一个小时
+                        now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+
+                        if time - now < 100: # 100相当于小于1分钟
+                            exMessage += "当前不允许倒签单;" 
+                    except:
+                        exMessage += "起运日期不合法;"                                 
+
         if policymodel.termContent == "":
             exMessage += "deductible不能为空;"
         if policymodel.insuranceFee == "":
