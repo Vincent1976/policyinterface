@@ -935,7 +935,7 @@ def ssdpolicy():
         if policymodel.shipperId == "":
             exMessage += "insuredidnumber不能为空;"
 
-        if policymodel.claimLimit != "LK801001": # 产品编号为LK801001时不校验
+        if policymodel.claimLimit != "LK801001" and policymodel.claimLimit != "LK999999": # 产品编号为LK801001时不校验
             if policymodel.shipId == "":
                 exMessage += "originaldocumentnumber不能为空;"            
             if policymodel.cargeValue == "":
@@ -1049,7 +1049,7 @@ def ssdpolicy():
         # else:
         #     raise Exception("测试环境暂时关闭")
 
-        if policymodel.claimLimit == "LK801001":
+        if policymodel.claimLimit == "LK801001" or policymodel.claimLimit == "LK999999" :
             if float(policymodel.insuranceFee) != 25.00:
                 raise Exception("30天期单的保费固定为25.00元")                  
         if policymodel.claimLimit == "LK801002":
