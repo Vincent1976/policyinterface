@@ -760,8 +760,8 @@ def issueInterface(guid):
         postdata["productDiffObject"] = productDiffObject
         Json = json.dumps(postdata, ensure_ascii=False)
         Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
-        print(Json)          
-        key = "123456@HT" # 线下提供的密钥
+        # print(Json)          
+        # key = "123456@HT" # 线下提供的密钥
         m = hashlib.md5()
         b = (str(Json2) + key).encode(encoding='utf-8')
         m.update(b)
