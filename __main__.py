@@ -21,7 +21,7 @@ import pymysql
 import os
 
 
-# 创建flask对象
+# 创建flask对象(测试同步推送)
 app = Flask(__name__)
 appowner = 'Draginins'  # 软件所有者
 
@@ -390,7 +390,8 @@ def jmpolicy():
         policymodel.channelOrderId = postdata['sequencecode']
         cust_sequencecode = postdata['sequencecode']
         policymodel.policyNo = postdata['solutionid']
-        policymodel.claimLimit = postdata['productid']
+        policymodel.claimLimit = postdata['productid']       
+
         action = postdata['action']  
         policymodel.Status = '等待投保'
         policymodel.CreateDate = datetime.datetime.now()
@@ -445,14 +446,14 @@ def jmpolicy():
             exMessage += "appkey不能为空;"
         if policymodel.bizContent == "":
             exMessage += "usercode不能为空;"
-        if policymodel.policyNo == "":
-            exMessage += "solutionid不能为空;"
+        # if policymodel.policyNo == "":
+        #     exMessage += "solutionid不能为空;"
         if policymodel.channelOrderId == "":
             exMessage += "sequencecode不能为空;"
         if policymodel.claimLimit == "":
             exMessage += "productid不能为空;"
-        if action == "":
-            exMessage += "action不能为空;"
+        # if action == "":
+        #     exMessage += "action不能为空;"
         if policymodel.custCoName == "":
             exMessage += "applicantname不能为空;"                        
         if policymodel.custProperty == "":
@@ -496,16 +497,18 @@ def jmpolicy():
             exMessage += "运单号或者车牌号至少一个必填;"
         if policymodel.trafficType == "":
             exMessage += "transportmodecode不能为空;"
-        if policymodel.departSpot == "":
-            exMessage += "startaddress不能为空;"
-        if policymodel.deliveryAddress == "":
-            exMessage += "endaddress不能为空;"
+        # if policymodel.departSpot == "":
+        #     exMessage += "startaddress不能为空;"
+        # if policymodel.deliveryAddress == "":
+        #     exMessage += "endaddress不能为空;"
         if policymodel.cargoName == "":
             exMessage += "descriptionofgoods不能为空;"
         if policymodel.cargoType == "":
             exMessage += "cargotype不能为空;"
         if policymodel.cargoCount == "":
             exMessage += "packagequantity不能为空;"
+        if exMessage !="":
+            raise Exception(exMessage)
 
         #单据唯一性
         remotedata = policy_model.jm_ht_remotedata.query.filter(policy_model.jm_ht_remotedata.appkey==postdata['appkey'], policy_model.jm_ht_remotedata.Status=='投保成功', policy_model.jm_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.jm_ht_remotedata.CreateDate.desc()).all()
@@ -572,12 +575,12 @@ def jmpolicy():
                 raise Exception("保费计算有误")
         else:
             raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
+
         
         policymodel.save()
 
         # 投递保险公司 或 龙琨编号
         _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
-
         if _Flag == "1":
             _Msg = "投保成功"
         result = {}
@@ -591,7 +594,7 @@ def jmpolicy():
         result['downloadurl'] = _PdfURL
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
-
+    
     except Exception as err:
         traceback.print_exc()
         result = {}
@@ -621,7 +624,7 @@ def getlog_jm():
     return send_from_directory(os.path.join(directory, 'uwsgi'), filename, as_attachment=True)
     #return send_file('/root/wwwroot/policyinterface/uwsgi/uwsgi.log')
 
-# 华泰出单接口
+# 华泰出单接口(沙师弟)
 def issueInterface(guid):
     from dals import dal
     from urllib import parse
@@ -632,73 +635,81 @@ def issueInterface(guid):
         row = dal.SQLHelper.fetch_one(sql,None)
         postdata={}
         channelObject = {}
-        channelObject["bizCode"]= '121' # 交易类型
-        channelObject["channelCode"]='100189' # 渠道编码
-        channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
-        channelObject["orderId"]= row[14] # 订单号 shipid
+        channelObject["bizCode"]= '101' # 交易类型
+      
+        channelObject["orderId"]= row[0]  # guid 
         channelObject["createTime"]= str(datetime.datetime.now())[0:19] # 当前时间
 
         insuranceObject = {}
-        # insuranceObject["insuranceCode"] = '362205' # 险种代码
-        insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
         insuranceObject['plan'] = 'A' # 款别
         insuranceObject['srcCPlyNo'] = '' # 不必填
         insuranceObject['prmCur'] = '01' 
         insuranceObject['premium'] = row[21] # 保险费
         insuranceObject['amtCur'] = '01'
-        insuranceObject['amount'] = '12000.0' 
-        insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
-        productid = row[17] # 产品编号
-        if productid == "LK801001":
+        insuranceObject['amount'] = '100000.0'
+        productid = row[17] # 产品编号 
+        if productid =="LK999999":
+            # 测试环境
+            channelObject["channelCode"]='100197' # 渠道编码
+            key = "123456@HT" # 线下提供的密钥
+            channelObject["channelName"]='上海励琨互联网科技有限公司' # 渠道名称
+            insuranceObject["insuranceName"] = '承运人公路货运责任保险条款 ' # 产品名称
+            url="http://219.141.242.74:9039/service_platform/InsureInterface"
+        else:
+            # 正式环境
+            channelObject["channelCode"]='100197' # 渠道编码
+            key = "shlkssd2020@HT" # 线下提供的密钥
+            channelObject["channelName"]='上海励琨-沙师弟' # 渠道名称
+            insuranceObject["insuranceName"] = '上海励琨-沙师弟公路承运险 ' # 产品名称
+            url="http://219.141.242.74:9004/service_platform/InsureInterface"
+
+        # insuranceObject['rate'] = str(decimal.Decimal(row[68][:-1]) * 10) # policyRate 去除百分号后乘以10 [:-1] 截取从头开始到倒数第一个字符之前
+        if productid == "LK801001" or productid =="LK999999":    
             now = datetime.datetime.now()
             insuranceObject['effectiveTime'] = (now- datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second,microseconds=now.microsecond)+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S") # 次日凌晨    
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 30)) # 保期30天
-            insuranceObject["insuranceCode"] = '3621'
+            insuranceObject["insuranceCode"] = '362104' # 险种代码
+
         if productid == "LK801002":
             insuranceObject['effectiveTime'] = row[36]# 保险起期 departDateTime
             insuranceObject['terminalTime'] = str(datetime.datetime.strptime(insuranceObject['effectiveTime'],'%Y-%m-%d %H:%M:%S')+ datetime.timedelta(days = 2)) # 保险至期+2天
-            insuranceObject["insuranceCode"] = '3622'
-
+            insuranceObject["insuranceCode"] = '362208' 
+    
+            
         insuranceObject['copy'] = '1' # 份数 
         insuranceObject['docType'] = '' # 不必填
         insuranceObject['docSN'] = '' # 不必填
 
         # 需要提供开票的六项信息
         appntObject = {}
-        appntObject["appName"] = row[3] # 投保人姓名 custCoName
+        # appntObject["appName"] = row[3] # 投保人姓名 custCoName
+        appntObject["appName"] = '沙师弟（重庆）网络科技有限公司及其子公司、分公司' # 投保人名称
         appntObject["appType"] = '2' 
-        # appntObject["appBirthday"] = '' # 不必填
         appntObject["appEmail"] = '' # 不必填
         appntObject["appGender"] = '' # 不必填
         appntObject["appIDType"] = '97' 
-        if appntObject["appName"] == '杭州钱江物流有限公司':
-            appntObject["appNumber"] = '91330102727621887N'# 被保人证件号
-        elif appntObject["appName"] == '杭州汉盛物流有限公司':
-            appntObject["appNumber"] = '91330182322907190D'# 被保人证件号
-        else:
-            appntObject["appNumber"] = '不详'# 被保人证件号
-        appntObject["appTelNumber"] = row[82] # 投保人电话号
-        appntObject["appAddr"] = row[86]# 地址信息
-        appntObject["appContact"] = row[74] # 联系人名字
+
+        appntObject["appNumber"] = row[79] # 投保人证件号(取validinsured表的CertfCde字段)
+
+        appntObject["appTelNumber"] = row[82] # 投保人电话号(取validinsured表的tel字段)
+        appntObject["appAddr"] = row[86]# 地址信息(取validinsured表的DetailAddress字段)
+        appntObject["appContact"] = row[9] # 司机名称 insuredname
         appntObject["isTaxInvoice"] = '1' 
-        appntObject["taxCertifi"] = row[79] # 税务登记证号
+        appntObject["taxCertifi"] = row[79] # 税务登记证号(取validinsured表的CertfCde字段)
         appntObject["depositBank"] = row[78] # 开户银行
         appntObject["bankAccount"] = row[77] # 银行账户
 
         insuredObject = {}
-        insuredObject["insuredName"] = row[9] # 被保险人名称
+        insuredObject["insuredName"] = '沙师弟（重庆）网络科技有限公司及其子公司、分公司' # 被保险人名称
         insuredObject["insuredType"] = '2' # 
         insuredObject["insuredEmail"] = '' # 不必填
         insuredObject["InsuredGender"] = '' # 不必填
         insuredObject["insuredIDType"] = '06' # 被保人证件类型
-        if insuredObject["insuredName"] == '杭州钱江物流有限公司':
-            insuredObject["insuredNumber"] = '91330102727621887N'# 被保人证件号
-        elif insuredObject["insuredName"] == '杭州汉盛物流有限公司':
-            insuredObject["insuredNumber"] = '91330182322907190D'# 被保人证件号
-        else:
-                insuredObject["insuredNumber"] = '不详'# 被保人证件号
-        insuredObject["insuredTelNumber"] = '不详' # 被保险人电话
-        insuredObject["insuredAddress"] = '' # 不必填
+
+
+        insuredObject["insuredNumber"] = appntObject["appNumber"]# 被保人证件号
+        insuredObject["insuredTelNumber"] = appntObject["appTelNumber"] # 被保险人电话
+        insuredObject["insuredAddress"] = appntObject["appAddr"] # 不必填
         insuredObject["relationship"] = '' # 不必填
         insuredObject["isLegal"] = '1' # 
         definedSafeObj = {}
@@ -713,19 +724,31 @@ def issueInterface(guid):
 
         productDiffObject = {}
         productDiffObject["reMark"] = '' # 默认为空
-        productDiffObject["vehicleNum"] = row[14] # 运单号 shipid
+        productDiffObject["vehicleNum"] = row[15] # 车牌号 licenseid
         productDiffObject["vehicleModel"] = '*'
         productDiffObject["vehicleLen"] = '*'
         productDiffObject["vehicleFrameNum"] = '*' 
-        productDiffObject["goodsName"] = row[27] # 货物名称 cargoName
+        productDiffObject["goodsName"] = str(row[27])+',运单号：'+ str(row[14]) # 货物名称 cargoName
+
         productDiffObject["goodsQuantity"] = row[37] # 货物数量 cargoCount
         productDiffObject["goodsPack"] = '08' # 包装方式
         productDiffObject["goodsValue"] = row[18] # 货物价值 cargeValue
+
+        productDiffObject["goodsType"] = "SX001423" # 货物大类
+        productDiffObject["goodsTypeSec"] = "SX00140105" # 二级货物明细
+        
         productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
         productDiffObject["transDepot"] = row[46] # 中转地
         productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
         productDiffObject["transDate"] = row[36] # 起运日期
-        productDiffObject["transportCost"] = row[18] # 运费
+        if productid == "LK801001" or productid =="LK999999": # 客户投保30天的期单
+            productDiffObject["transportCost"] = ""
+
+        if productid == "LK801002": # 次单
+            productDiffObject["transportCost"] = row[18] # 运费
+
+        productDiffObject["insuredContact"] = row[9] # 被保人联系人
+        productDiffObject["insuredTel"] = row[7] # 被保人联系方式
 
         postdata["channelObject"] = channelObject
         postdata["insuranceObject"] = insuranceObject
@@ -738,7 +761,7 @@ def issueInterface(guid):
         Json = json.dumps(postdata, ensure_ascii=False)
         Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
         # print(Json)          
-        key = "123456@HT" # 线下提供的密钥
+        # key = "123456@HT" # 线下提供的密钥
         m = hashlib.md5()
         b = (str(Json2) + key).encode(encoding='utf-8')
         m.update(b)
@@ -752,8 +775,7 @@ def issueInterface(guid):
         log_file.write(str(Json)+'\n')
         #log_file.write(signmd5)
             
-        #post出单接口请求
-        url="http://219.141.242.74:9039/service_platform/InsureInterface"
+        
         # 通过字典方式定义请求body
         FormData = {"json": str(Json), "channelCode": str(channelObject["channelCode"]), "signature": str(signmd5)}
         data = parse.urlencode(FormData)
@@ -806,7 +828,6 @@ def issueInterface(guid):
         sql = "UPDATE ssd_ht_remotedata SET Status='%s', errLog='%s', bizContent='%s', custId='%s',relationType='%s' WHERE guid='%s'" %(_Status, _Msg, _InsurancePolicy, _orderId, _PdfURL, guid)
         dal.SQLHelper.update(sql,None)
         return _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag
-
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err)
@@ -821,6 +842,7 @@ def ssdpolicy():
     from models import GJXXPT_Product_model
     from dals import dal
     from models import ValidInsured_model
+    import time
 
     try:
         # 获取请求 
@@ -886,10 +908,6 @@ def ssdpolicy():
         policymodel.volume = postdata['volume']
         policymodel.mpRate = postdata['volumeunit']
 
-        # ValidInsured = ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==policymodel.appkey,ValidInsured_model.ValidInsured.ValidInsuredName==policymodel.custCoName).all()
-        # ValidInsured = model_to_dict(ValidInsured)
-        # if len(ValidInsured)==0 :
-        #     raise Exception('开票信息配置信息不存在，投保失败')
         #必填项校验
         exMessage = ''
         
@@ -897,8 +915,8 @@ def ssdpolicy():
             exMessage += "appkey不能为空;"
         if policymodel.bizContent == "":
             exMessage += "usercode不能为空;"
-        if policymodel.policyNo == "":
-            exMessage += "solutionid不能为空;"
+        # if policymodel.policyNo == "":
+        #     exMessage += "solutionid不能为空;"
         if policymodel.channelOrderId == "":
             exMessage += "sequencecode不能为空;"
         if policymodel.claimLimit == "":
@@ -917,10 +935,43 @@ def ssdpolicy():
             exMessage += "insuredtype不能为空;"
         if policymodel.shipperId == "":
             exMessage += "insuredidnumber不能为空;"
-        if policymodel.cargeValue == "":
-            exMessage += "policyamount不能为空;"
-        if policymodel.policyRate == "":
-            exMessage += "rate不能为空;"
+
+        if policymodel.claimLimit != "LK801001" and policymodel.claimLimit != "LK999999": # 产品编号为LK801001时不校验
+            if policymodel.shipId == "":
+                exMessage += "originaldocumentnumber不能为空;"            
+            if policymodel.cargeValue == "":
+                exMessage += "policyamount不能为空;"
+            # if policymodel.policyRate == "":
+            #     exMessage += "rate不能为空;"
+            if policymodel.departSpot == "":
+                exMessage += "startaddress不能为空;"
+            if policymodel.deliveryAddress == "":
+                exMessage += "endaddress不能为空;"
+            if policymodel.cargoName == "":
+                exMessage += "descriptionofgoods不能为空;"                
+            if policymodel.cargoType == "":
+                exMessage += "cargotype不能为空;"
+            if policymodel.cargoCount == "":
+                exMessage += "packagequantity不能为空;" 
+            if policymodel.departDateTime == "":
+                exMessage += "insuredatetime不能为空;"
+            else:        
+                if len(policymodel.departDateTime) != 14:
+                    raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
+                else:                   
+                    # 倒签单校验
+                    departDateTimes = policymodel.departDateTime
+                    try:
+                        time.strptime(departDateTimes, "%Y%m%d%H%M%S") # 校验日期是否合法
+                        policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
+                        time = int(departDateTimes)+10000 # 加10000相当于一个小时
+                        now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+
+                        if time - now < 100: # 100相当于小于1分钟
+                            exMessage += "当前不允许倒签单;" 
+                    except:
+                        exMessage += "起运日期不合法;"                                 
+
         if policymodel.termContent == "":
             exMessage += "deductible不能为空;"
         if policymodel.insuranceFee == "":
@@ -929,35 +980,15 @@ def ssdpolicy():
             exMessage += "insurancecoveragename不能为空;"
         if policymodel.mpRelation == "":
             exMessage += "chargetypecode不能为空;"
-        if policymodel.departDateTime == "":
-            exMessage += "insuredatetime不能为空;"
-        else:        
-            if len(policymodel.departDateTime) != 14:
-                raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
-            else:                   
-                # 倒签单校验
-                departDateTimes = policymodel.departDateTime
-                policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
-                time = int(departDateTimes)+10000 # 加10000相当于一个小时
-                now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+   
                 
-                if time - now < 100: # 100相当于小于1分钟
-                    exMessage += "当前不允许倒签单;"
-                
-        if policymodel.transitSpot == "" and policymodel.licenseId =="":
-            exMessage += "运单号或者车牌号至少一个必填;"
+        if policymodel.licenseId =="":
+            exMessage += "车牌号不能为空;"
         if policymodel.trafficType == "":
-            exMessage += "transportmodecode不能为空;"
-        if policymodel.departSpot == "":
-            exMessage += "startaddress不能为空;"
-        if policymodel.deliveryAddress == "":
-            exMessage += "endaddress不能为空;"
-        if policymodel.cargoName == "":
-            exMessage += "descriptionofgoods不能为空;"
-        if policymodel.cargoType == "":
-            exMessage += "cargotype不能为空;"
-        if policymodel.cargoCount == "":
-            exMessage += "packagequantity不能为空;"
+            exMessage += "transportmodecode不能为空;"  
+
+        if exMessage !="":
+            raise Exception(exMessage)
 
         #单据唯一性
         remotedata = policy_model.ssd_ht_remotedata.query.filter(policy_model.ssd_ht_remotedata.appkey==postdata['appkey'],policy_model.ssd_ht_remotedata.Status == '投保成功', policy_model.ssd_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.ssd_ht_remotedata.CreateDate.desc()).all()
@@ -979,9 +1010,9 @@ def ssdpolicy():
         product_transportcode = dataresult[0]['TransportModeCode']
         product_chargetypecode = dataresult[0]['ChargeTypeCode']
         product_cargotype = dataresult[0]['CargoTypeClassification1']
-        product_lowestpremium = dataresult[0]['MonetaryAmount']#最低保费
+
         product_rate = dataresult[0]['Rate'] #约定费率
-        product_maxAmount = dataresult[0]['PolicyAmount'] #最高保额
+        # product_maxAmount = dataresult[0]['PolicyAmount'] #最高保额
 
         if policymodel.termContent == "按约定":
             policymodel.termContent = product_deductible
@@ -1004,46 +1035,34 @@ def ssdpolicy():
             raise Exception("运输方式编码与产品定义不符")
         if policymodel.mpRelation != product_chargetypecode:
             raise Exception("计费方式与产品定义不符")        
-        if policymodel.cargoType != product_cargotype:
-            raise Exception("货物类型编码与产品定义不符")
+        # if policymodel.cargoType != product_cargotype:
+        #     raise Exception("货物类型编码与产品定义不符")
 
-        # 保费校验 如果触发最低保费，则不校验费率，否则需校验
-
-        if product_maxAmount != "" and float(product_maxAmount) != 0.00:
-            # 触发最高保额          
-            m3 = decimal.Decimal(str(decimal.Decimal(policymodel.cargeValue))) - decimal.Decimal(str(decimal.Decimal(product_maxAmount)))
-            if m3 > 0 :
-                raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
-        
-            # 如果触发最低保费，则不校验费率，否则需校验
-        # if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
-        #     # 保费=保额*费率
-        #     _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
-        #     _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))
-        #     if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
-        #         raise Exception("保费计算有误")
-        # else:
-        #     raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
+        # if product_maxAmount != "" and float(product_maxAmount) != 0.00:
+        #     # 触发最高保额          
+        #     m3 = decimal.Decimal(str(decimal.Decimal(policymodel.cargeValue))) - decimal.Decimal(str(decimal.Decimal(product_maxAmount)))
+        #     if m3 > 0 :
+        #         raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
 
         # 产品编号校验
-        if policymodel.claimLimit == "LK801001":
+        # if policymodel.claimLimit == "LK801001":
+        #     if float(policymodel.insuranceFee) != 25.00:
+        #         raise Exception("30天期单的保费固定为25.00元")                  
+        # elif policymodel.claimLimit == "LK801002":
+        #     if float(policymodel.insuranceFee) != 1.00:
+        #         raise Exception("次单的保费固定为1.00元")
+        # else:
+        #     raise Exception("测试环境暂时关闭")
+
+        if policymodel.claimLimit == "LK801001" or policymodel.claimLimit == "LK999999" :
             if float(policymodel.insuranceFee) != 25.00:
-                raise Exception("保费只能是25.00")
-            policymodel.cargeValue == "10万"
-            
+                raise Exception("30天期单的保费固定为25.00元")                  
         if policymodel.claimLimit == "LK801002":
             if float(policymodel.insuranceFee) != 1.00:
-                raise Exception("保费只能是1.00")
-            policymodel.cargeValue == "10万"
-        
-            
-
-
-
+                raise Exception("次单的保费固定为1.00元")
 
         
         policymodel.save()
-
         # 投递保险公司 或 龙琨编号
 
         _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = issueInterface(newguid)     
@@ -1428,7 +1447,7 @@ def getjmpolicy(appkey, billno):
         result['appkey'] = appkey
         result['sequencecode'] = channelOrderId
         result['premium'] = dataresult[0]['insuranceFee']
-        result['policyno'] = dataresult[0]['policyNo']
+        result['policyno'] = dataresult[0]['policySolutionID']
         result['downloadurl'] = dataresult[0]['relationType']
         return json.dumps(result)
     except Exception as err:
@@ -1516,12 +1535,12 @@ def postInsurer_HT(guid):
         fromCountry="HTC01" #起运地国家（编码）
 
         ######起运地国家（编码）/起运地
-        fromArea=remotedata[0]['departProvince']+remotedata[0]['departCity']+remotedata[0]['departDistrict'] #起运地 
+        fromArea=remotedata[0]['departProvince']+remotedata[0]['departCity']+remotedata[0]['departDistrict'] + remotedata[0]['departSpot'] #起运地 
         passPort="" #途径港S
         toContry="HTC01" #目的地国家 （编码）
 
         ######目的地国家（编码）/目的地
-        toArea=remotedata[0]['destinationProvice']+remotedata[0]['destinationCity']+remotedata[0]['destinationDistrict'] #目的地  
+        toArea=remotedata[0]['destinationProvice']+remotedata[0]['destinationCity']+remotedata[0]['destinationDistrict']+remotedata[0]['deliveryAddress'] #目的地  
         surveyAdrID=RBProductInfo[0]['Additive'] #查勘地址编码
         surveyAdr="" #查勘地址内容 
         trantsTool="" #转运工具
@@ -1742,6 +1761,8 @@ def postInsurer_HT(guid):
             _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
             _PdfURL = resultNode.getElementsByTagName("PdfURL")[0].childNodes[0].data    
             _Status = "投保成功"
+            if productNo == "LK999999":
+                _Status = '测试数据'
         else: # 投保失败
             _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
             _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
