@@ -21,7 +21,7 @@ import pymysql
 import os
 
 
-# 创建flask对象
+# 创建flask的对象
 app = Flask(__name__)
 appowner = 'Draginins'  # 软件所有者
 
