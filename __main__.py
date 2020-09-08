@@ -843,12 +843,10 @@ def ssdpolicy():
     from dals import dal
     from models import ValidInsured_model
     import time
-
     try:
         # 获取请求 
         postdata = json.loads(request.get_data(as_text=True))
         policymodel = policy_model.ssd_ht_remotedata()
-        
         newguid = str(uuid.uuid1())
         #写入日志
         log_file = open('logs/' + newguid +'_ssdpolicy.log',mode='a', encoding='utf-8')
@@ -937,6 +935,7 @@ def ssdpolicy():
             exMessage += "insuredidnumber不能为空;"
 
         if policymodel.claimLimit != "LK801001" and policymodel.claimLimit != "LK999999": # 产品编号为LK801001时不校验
+
             if policymodel.shipId == "":
                 exMessage += "originaldocumentnumber不能为空;"            
             if policymodel.cargeValue == "":
@@ -982,7 +981,7 @@ def ssdpolicy():
             exMessage += "chargetypecode不能为空;"
    
                 
-        if policymodel.licenseId =="":
+        if policymodel.licenseId =="" or policymodel.licenseId == None:
             exMessage += "车牌号不能为空;"
         if policymodel.trafficType == "":
             exMessage += "transportmodecode不能为空;"  
