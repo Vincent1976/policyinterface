@@ -42,6 +42,13 @@ def DataCheck(T):
         salesid=str(row[0])
         dispatchno=str(row[1])
         tt=int(row[2])
+        if tt<=7 and tt>3:
+            log_file.write('无法在3日内配载,调度单号：'+str(dispatchno)+',商品订单号：'+str(salesid)+',配载日期差：'+str(tt)+'\n')
+            continue
+    for row in data:
+        salesid=str(row[0])
+        dispatchno=str(row[1])
+        tt=int(row[2])
         if tt>7:
             log_file.write('无法在7日内配载,调度单号：'+str(dispatchno)+',商品订单号：'+str(salesid)+',配载日期差：'+str(tt)+'\n')
             continue
@@ -80,6 +87,8 @@ def CityCheck(T):
             taddxCK=3
         elif taddx>=5 and taddx<=7:
             taddxCK=4
+        elif taddx>7:
+           taddxCK=5
         else:
             log_file.write('可配载城市数量超标,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载城市数：'+str(citycount)+',可配载城市数(x='+str(taddx)+')：'+str(taddxCK)+'\n')
             continue
@@ -121,6 +130,8 @@ def AddressCheck(T):
             taddxCK=4
         elif taddx>=5 and taddx<=7:
             taddxCK=5
+        elif taddx>7:
+            taddxCK=6
         else:
             log_file.write('可配载经销商数量超标,调度单号：'+str(dispatchno)+',车牌号：'+str(licenseid)+',板车实际配载经销商数：'+str(addresscount)+',可配载经销商数(x='+str(taddx)+')：'+str(taddxCK)+'\n')
             continue
@@ -185,9 +196,9 @@ def SalesidCheck(T):
             log_file.write('同一订单当日未全部发运,调度单号：'+dispatchno+',商品订单号：'+str(salesid)+'\n')
             continue
 
-    sql="select dispatchbills.salesid,dispatchsecurall2.dispatchno,count(distinct dispatchbills.license) from dispatchsecurall2 left join dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
-        where cast(dispatchsecurall2.deliverydate as date)='2020/4/3'\
-        GROUP BY dispatchbills.salesid,dispatchsecurall2.dispatchno,dispatchbills.license HAVING count(distinct dispatchbills.license)>1"
+    sql="select dispatchbills.salesid,dispatchsecurall2.dispatchno,GROUP_CONCAT(distinct dispatchsecurall2.licenseid) from dispatchsecurall2 \
+        left join dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid where cast(dispatchsecurall2.deliverydate as date)='"+T+"' \
+        GROUP BY dispatchbills.salesid,dispatchsecurall2.dispatchno HAVING count(distinct dispatchsecurall2.licenseid)>1"
     cursor.execute(sql)
     data2 = cursor.fetchall()
     if len(data2)>0:
@@ -249,20 +260,24 @@ def LinesCheck(T):
 
     log_file.write('\n\n---------------------------不在同一个线路包内 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
 
-    sql="select distinct dispatchsecurall2.cys,dispatchsecurall2.city,dispatchno,dispatchsecurall2.licenseid from dispatchsecurall2 where cast(dispatchsecurall2.deliverydate as date)='"+T+"';"
+    sql="select distinct dispatchsecurall2.cys,dispatchno,dispatchsecurall2.licenseid from dispatchsecurall2 where cast(dispatchsecurall2.deliverydate as date)='"+T+"';"
     cursor.execute(sql)
     data = cursor.fetchall()
     for row in data:
         cys=str(row[0])
-        city=str(row[1])
-        dispatchno=str(row[2])
-        licenseid=str(row[3])
+        dispatchno=str(row[1])
+        licenseid=str(row[2])
 
-        sql=" select IFNULL(GROUP_CONCAT(code2),'') from linepackage LEFT JOIN linepackage_cys on linepackage_cys.code=code2 where cys='"+cys+"' and city='"+city+"' GROUP BY code2 HAVING count(1)>1"
+        # sql=" select IFNULL(GROUP_CONCAT(code2),''),IFNULL(GROUP_CONCAT(city),'') from linepackage LEFT JOIN linepackage_cys on linepackage_cys.code=code2 where cys='"+cys+"' \
+        #     and city in (select distinct city from dispatchsecurall2 where cys='"+cys+"' and dispatchno='"+dispatchno+"' and licenseid='"+licenseid+"') GROUP BY cys"
+        sql="select IFNULL(GROUP_CONCAT(code2),'') 'code2',IFNULL(GROUP_CONCAT(city),'') 'city',vount from (\
+ select IFNULL(GROUP_CONCAT(code2),'') 'code2',IFNULL(GROUP_CONCAT(city),'') 'city','1' vount from linepackage LEFT JOIN linepackage_cys on linepackage_cys.code=code2 where cys='"+cys+"' \
+ and city in (select distinct city from dispatchsecurall2 where cys='"+cys+"' and dispatchno='"+dispatchno+"' and licenseid='"+licenseid+"') GROUP BY code2) linepackage GROUP BY vount HAVING count(1)>1;"
         cursor.execute(sql)
         data2 = cursor.fetchall()
         for row in data2:
-            code2=str(row[0][0])
+            code2=str(row[0])
+            city=str(row[1])
             log_file.write('不在同一个线路包内，调度单号：'+dispatchno+'，车牌号：'+licenseid+'，承运商：'+cys+',城市："'+city+'",线路包code：'+code2+'\n')
 
 
@@ -351,8 +366,8 @@ def LinesCheck(T):
 
 if __name__ == "__main__":
     try:
-        start=datetime.datetime.strptime('2020/4/10','%Y/%m/%d')
-        end=datetime.datetime.strptime('2020/6/5','%Y/%m/%d')
+        start=datetime.datetime.strptime('2020/4/5','%Y/%m/%d')
+        end=datetime.datetime.strptime('2020/4/7','%Y/%m/%d')
         
         while start<=end:
             T=str(start.strftime('%Y/%m/%d'))
