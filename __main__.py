@@ -1820,7 +1820,6 @@ def hspolicy():
         policymodel.insuredName = postdata['insuredname']
         policymodel.shipperProperty = postdata['insuredtype']        
         policymodel.shipperId = postdata['insuredidnumber']
-        # policymodel.shipperContact = postdata['spname']
         policymodel.shipperName = postdata['spname']
 
         # 保险信息
@@ -2001,9 +2000,7 @@ def hspolicy():
         if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
             # 保费=保额*费率
             _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
-            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))
-            print(_premium)
-            print(policymodel.insuranceFee)
+            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))          
             if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
                 raise Exception("保费计算有误")
         else:
