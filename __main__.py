@@ -739,6 +739,10 @@ def issueInterface(guid):
         
         productDiffObject["transFrom"] = row[28]+row[29]+row[30] #  省、市、区（departProvince + departCity + departDistrict）
         productDiffObject["transDepot"] = row[46] # 中转地
+        # 校验中转地
+        if len(productDiffObject["transDepot"])>100:
+            productDiffObject["transDepot"] = "见运单"
+
         productDiffObject["transTo"] = row[42] # 目的地 deliveryAddress
         productDiffObject["transDate"] = row[36] # 起运日期
         if productid == "LK801001" or productid =="LK999999": # 客户投保30天的期单
