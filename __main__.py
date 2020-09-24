@@ -2060,7 +2060,7 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
     try:
         mail_host = 'smtp.exmail.qq.com'  # 设置服务器
         mail_user = 'policy@dragonins.com'    # 用户名
-        mail_pass = '7rus7U5!'   # 口令
+        mail_pass = 'Sate1llite'   # 口令
         smtpObj = smtplib.SMTP()
         smtpObj.connect(mail_host, 25)    # 25 为 SMTP 端口号
         smtpObj.login(mail_user, mail_pass)
