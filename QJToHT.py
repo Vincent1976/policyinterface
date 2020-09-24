@@ -15,7 +15,7 @@ from urllib import parse
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
     sender = 'policy@dragonins.com'
-    receivers = mailaddr  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+    receivers = [mailaddr]  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
     # 三个参数：第一个为文本内容，第二个 plain 设置文本格式，第三个 utf-8 设置编码
     message = MIMEText(mailcontent, 'html', 'utf-8')
     message['Subject'] = Header(mailtitle, 'utf-8')
@@ -23,7 +23,7 @@ def sendAlertMail(mailaddr, mailtitle, mailcontent):
     try:
         mail_host = 'smtp.exmail.qq.com'  # 设置服务器
         mail_user = 'policy@dragonins.com'    # 用户名
-        mail_pass = '7rus7U5!'   # 口令
+        mail_pass = 'Sate1llite'   # 口令
         smtpObj = smtplib.SMTP()
         smtpObj.connect(mail_host, 25)    # 25 为 SMTP 端口号
         smtpObj.login(mail_user, mail_pass)
@@ -56,7 +56,7 @@ def issueInterface():
                 sql = "UPDATE remotedata SET Status = '投保失败', errLog = '起运日期不能早于投保日期' WHERE guid = '"+guid+"'"
                 cursor.execute(sql)
                 conn.commit()
-                sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com'],'钱江——华泰投递出错','起运日期不能早于投保日期，guid=' + str(guid))
+                sendAlertMail('manman.zhang@dragonins.com','钱江——华泰投递出错','起运日期不能早于投保日期，guid=' + str(guid))
                 continue
 
             channelObject = {}
@@ -225,7 +225,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "人工核保" 
-                sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com'],'钱江-对接华泰',str(guiderr) + '<br />' + str(error))
+                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error))
             elif _responseCode == "1": # 核保通过
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
@@ -239,7 +239,7 @@ def issueInterface():
                 _bizCode = content['bizCode'] 
                 _responseInfo = content['responseInfo'] 
                 _Status = "投保失败" 
-                sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com'],'钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
+                sendAlertMail('manman.zhang@dragonins.com','钱江-对接华泰',str(guiderr) + '<br />' + str(error)) 
             # 回写remotedata投保表
             sql = "UPDATE remotedata SET Status = '"+_Status+"', errLog = '"+_responseInfo+"', bizContent = '"+_policyNO+"', relationType = '"+_policyURL+"'  WHERE guid = '"+guid+"'"
             cursor.execute(sql) #执行sql 语句
@@ -247,7 +247,7 @@ def issueInterface():
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
-        sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com'],'钱江——华泰投递出错',str(err)+'<br />' + str(FormData))
+        sendAlertMail('manman.zhang@dragonins.com','钱江——华泰投递出错',str(err)+'<br />' + str(FormData))
 
 issueInterface() # 调用华泰出单接口
 
