@@ -763,8 +763,7 @@ def issueInterface(guid):
         postdata["agreementObject"] = agreementObject
         postdata["productDiffObject"] = productDiffObject
         Json = json.dumps(postdata, ensure_ascii=False)
-        Json2 = Json.replace("%", "%25").replace("&", "%26").replace("\\+", "%2B")
-        # print(Json)          
+        Json2 = Json.replace("%", "%25").replace("&", "%26").replace("+", "%2B")
         # key = "123456@HT" # 线下提供的密钥
         m = hashlib.md5()
         b = (str(Json2) + key).encode(encoding='utf-8')
