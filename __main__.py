@@ -464,8 +464,8 @@ def jmpolicy():
             exMessage += "insuredName不能为空;"
         if policymodel.shipperProperty == "":
             exMessage += "insuredtype不能为空;"
-        if policymodel.shipperId == "":
-            exMessage += "insuredidnumber不能为空;"
+        # if policymodel.shipperId == "":
+        #     exMessage += "insuredidnumber不能为空;"
         if policymodel.cargeValue == "":
             exMessage += "policyamount不能为空;"
         if policymodel.policyRate == "":
