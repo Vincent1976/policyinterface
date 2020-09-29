@@ -1,5 +1,4 @@
 import pandas as pd
-import pymssql
 import datetime
 import traceback
 import smtplib
@@ -7,13 +6,8 @@ from email.header import Header
 from email.mime.text import MIMEText
 import pymysql
 import math
-import pymssql
+import sys
 import datetime
-import traceback
-import smtplib
-from email.header import Header
-from email.mime.text import MIMEText
-import pymysql
 
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
@@ -40,7 +34,7 @@ cursor = conn.cursor()
 results=[]
 
 #约束条件1.2：订单下发时间越早的订单越早安排
-def DataCheck(T):
+def DataCheck(T,tbname):
     sql="select licenseid,dispatchno from dispatchsecurall2 where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
     cursor.execute(sql)
     data = cursor.fetchall()
@@ -71,7 +65,7 @@ def DataCheck(T):
             continue
 
 #约束条件1.3：可配载城市数量约束
-def CityCheck(T):
+def CityCheck(T,tbname):
     sql="select licenseid,COUNT(distinct dispatchbills.city) as 'citycount',dispatchno from dispatchsecurall2 \
         LEFT JOIN dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
         where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
@@ -118,7 +112,7 @@ def CityCheck(T):
             continue
 
 #约束条件1.4：可配载经销商数量约束
-def AddressCheck(T):
+def AddressCheck(T,tbname):
     sql="select licenseid,COUNT(distinct dispatchbills.address) as 'addresscount',dispatchno from dispatchsecurall2 \
         LEFT JOIN dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
         where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY licenseid,dispatchno order by dispatchno,licenseid"
@@ -165,13 +159,13 @@ def AddressCheck(T):
             continue
 
 #约束条件1.5：始发地之间拼车
-def vlimit(T):
+def vlimit(T,tbname):
     sql="select license,vbase,vlimits from (\
          select *,\
-         (select GROUP_CONCAT(distinct vlimit) from dispatchbills where SUBSTRING(dispatchbills.license,9)=dispatchavavehicle2.license and LEFT(dispatchbills.deliverydate,10)=DATE_FORMAT(dispatchavavehicle2.deliverydate,'%Y-%m-%d') GROUP BY right(license,7)) 'vlimits',\
-         (select count(distinct vlimit) from dispatchbills where SUBSTRING(dispatchbills.license,9)=dispatchavavehicle2.license and LEFT(dispatchbills.deliverydate,10)=DATE_FORMAT(dispatchavavehicle2.deliverydate,'%Y-%m-%d') GROUP BY right(license,7)) 'vlimitsC' \
-         from dispatchavavehicle2 where cast(deliverydate as date)='"+T+"'\
-         ) dispatchavavehicle2 where dispatchavavehicle2.vlimitsC>1;"
+         (select GROUP_CONCAT(distinct vlimit) from dispatchbills where SUBSTRING(dispatchbills.license,9)="+tbname+".license and LEFT(dispatchbills.deliverydate,10)=DATE_FORMAT("+tbname+".deliverydate,'%Y-%m-%d') GROUP BY right(license,7)) 'vlimits',\
+         (select count(distinct vlimit) from dispatchbills where SUBSTRING(dispatchbills.license,9)="+tbname+".license and LEFT(dispatchbills.deliverydate,10)=DATE_FORMAT("+tbname+".deliverydate,'%Y-%m-%d') GROUP BY right(license,7)) 'vlimitsC' \
+         from "+tbname+" where cast(deliverydate as date)='"+T+"'\
+         ) "+tbname+" where "+tbname+".vlimitsC>1;"
     cursor.execute(sql)
     data = cursor.fetchall()
 
@@ -204,7 +198,7 @@ def vlimit(T):
                 continue
 
 #约束条件1.6：订单分配策略
-def SalesidCheck(T):
+def SalesidCheck(T,tbname):
     sql="select dispatchbills.salesid,dispatchsecurall2.dispatchno from dispatchsecurall2 left join dispatchbills on dispatchsecurall2.orderid=dispatchbills.guid \
         where cast(dispatchsecurall2.deliverydate as date)='"+T+"' group by dispatchbills.salesid,dispatchsecurall2.dispatchno order by dispatchsecurall2.dispatchno"
     cursor.execute(sql)
@@ -247,7 +241,7 @@ def SalesidCheck(T):
             results.append(item)
 
 #约束条件2.1：承运车辆（板车）装载数量
-def VcountCheck(T):
+def VcountCheck(T,tbname):
     sql="select dispatchsecurall2.licenseid,dispatchsecurall2.dispatchno,count(1) from dispatchsecurall2 \
          where cast(dispatchsecurall2.deliverydate as date)='"+T+"' GROUP BY dispatchsecurall2.licenseid,dispatchsecurall2.dispatchno order by dispatchsecurall2.dispatchno;"
     cursor.execute(sql)
@@ -260,11 +254,11 @@ def VcountCheck(T):
         item=[]
 
         if dispatchno.find('ai')>=0:
-            sql="select IFNULL(vcount,'') from dispatchavavehicle2 where guid =(select distinct licenseguid from dispatchsecurall2 where licenseid='"+licenseid+"' and dispatchno='"+dispatchno+"')"
+            sql="select IFNULL(vcount,'') from "+tbname+" where guid =(select distinct licenseguid from dispatchsecurall2 where licenseid='"+licenseid+"' and dispatchno='"+dispatchno+"')"
             cursor.execute(sql)
             data2 = cursor.fetchall()
             if len(data2)==0 or str(data2[0][0])=='':
-                item.extend(['约束条件2.1：承运车辆（板车）装载数量',dispatchno,'','',licenseid,'','','','','','','','','',str(count),'','dispatchavavehicle2未找到该车',str(T)])
+                item.extend(['约束条件2.1：承运车辆（板车）装载数量',dispatchno,'','',licenseid,'','','','','','','','','',str(count),'','"+tbname+"未找到该车',str(T)])
                 results.append(item)
                 continue
             if count<int(data2[0][0]):
@@ -285,7 +279,7 @@ def VcountCheck(T):
             continue
 
 #约束条件3.3：承运商线路包及其份额（+当日发运数）
-def LinesCheck(T):
+def LinesCheck(T,tbname):
     sql="select distinct dispatchsecurall2.cys,dispatchsecurall2.city,dispatchno,dispatchsecurall2.licenseid from dispatchsecurall2 \
         left join (select linepackage.*, cys, cysshare from linepackage LEFT JOIN linepackage_cys on linepackage_cys.code=code2) linepackage on linepackage.cys=dispatchsecurall2.cys \
         and linepackage.city=dispatchsecurall2.city where IFNULL(linepackage.guid,'')='' and cast(dispatchsecurall2.deliverydate as date)='"+T+"';"
@@ -323,35 +317,42 @@ def LinesCheck(T):
 
 if __name__ == "__main__":
     try:
-        start=datetime.datetime.strptime('2020/4/3','%Y/%m/%d')
-        end=datetime.datetime.strptime('2020/5/31','%Y/%m/%d')
-        # start=datetime.datetime.strptime('2020/4/12','%Y/%m/%d')
-        # end=datetime.datetime.strptime('2020/4/12','%Y/%m/%d')
-        
+        argv1=input("请输入开始时间(例如：2020/4/3)：")
+        argv2=input("请输入结束时间(例如：2020/4/10)：")
+        argv3=input("请输入可用车辆表(\
+0 原始数据（每条一城）\
+1 原始数据（每条多城）\
+2 加工数据（线路包分离）\
+3 加工数据（线路包分离+接单立即发车）)：")
+
+        tbname=""
+        if argv3=="0":
+            tbname="dispatchavavehicle_origin"
+        elif argv3=="1":
+            tbname="dispatchavavehicle2_copy"
+        elif argv3=="2":
+            tbname="dispatchavavehicle2_test3"
+        else:
+            tbname="dispatchavavehicle2"
+
+        start=datetime.datetime.strptime(argv1,'%Y/%m/%d')
+        end=datetime.datetime.strptime(argv2,'%Y/%m/%d')
+           
         while start<=end:
             T=str(start.strftime('%Y/%m/%d'))
-            DataCheck(T)
-            CityCheck(T)
-            AddressCheck(T)
-            vlimit(T)
-            SalesidCheck(T)
-            VcountCheck(T)
-            LinesCheck(T)
+            DataCheck(T,tbname)
+            CityCheck(T,tbname)
+            AddressCheck(T,tbname)
+            vlimit(T,tbname)
+            SalesidCheck(T,tbname)
+            VcountCheck(T,tbname)
+            LinesCheck(T,tbname)
             start+=datetime.timedelta(days=1)
 
-        # print(results)
         newData=pd.DataFrame(columns=['校验约束','调度单号','商品订单号','配载日期差','车牌号','承运商','城市','线路包code','板车实际配载(城市/经销商)数','可配载(城市/经销商)数','可配载(城市/经销商)数x','基地','出发地拼车','装载板车','板车配载车辆数','可用车位数','校验结果','T'],data=results)
         newData.to_csv(str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))+'.csv', encoding='gbk', index=False)
         print('-----约束检查已完成，请查看结果文件')
     except Exception as err:
         traceback.print_exc()
         print("请求失败",err) 
-        sendAlertMail(['qian.hong@dragonins.com','manman.zhang@dragonins.com'],'调度检验出错',str(err)+'<br />')
-
-
-# writer = pd.ExcelWriter('test.xlsx')
-# data1 = pd.read_csv("abc.csv", encoding="gbk",index_col=0)
-# data2 = pd.read_csv("abc2.csv", encoding="gbk",index_col=0)
-# data1.to_excel(writer,sheet_name='2019-04-01')
-# data2.to_excel(writer,sheet_name='2019-04-02')
-# writer.save()
+        sendAlertMail(['qian.hong@dragonins.com','daniel.lee@dragonins.com'],'调度检验出错',str(err)+'<br />')
