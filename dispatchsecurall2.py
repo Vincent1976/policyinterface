@@ -340,6 +340,7 @@ if __name__ == "__main__":
            
         while start<=end:
             T=str(start.strftime('%Y/%m/%d'))
+            print(T)
             DataCheck(T,tbname)
             CityCheck(T,tbname)
             AddressCheck(T,tbname)
