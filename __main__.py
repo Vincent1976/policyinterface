@@ -2048,6 +2048,43 @@ def hspolicy():
         return json.loads(resultReturn)
 
 
+# (孙博士)
+@app.route('/getforecast', methods=['POST'])
+def getforecast(): 
+    from forecast import forecast
+    import pandas as pd
+
+    try:
+        # 获取请求 
+        postdata = json.loads(request.get_data(as_text=True))
+        actualvalue = postdata["actualvalue"]
+        forecastperiod = postdata["forecastperiod"]
+        forecasttimes = postdata["forecasttimes"]
+        # list 转为 dataframe
+        df = pd.DataFrame(actualvalue,columns=['value'])
+        a,b,c,d,e,f,g = forecast(df.value, forecastperiod, forecasttimes)
+        data1={}
+
+        forecast_value = str([a]).replace("array([","").replace("])","")
+        fit_value = str([d]).replace("array([","").replace("])","")
+
+        data1["forecast_value"] = forecast_value
+        data1["fit_value"] = fit_value
+        data1["accu"] = f
+        data1["corr"] = g
+        jsondata = str(json.dumps(data1,ensure_ascii=False)).replace("\\n","")
+        print(jsondata)
+
+
+        return "接收成功"
+
+    except Exception as err:
+        traceback.print_exc()
+        return "接收失败"
+
+
+
+
 # 发送注册验证邮件
 def sendAlertMail(mailaddr, mailtitle, mailcontent):
     sender = 'policy@dragonins.com'
