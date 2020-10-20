@@ -2065,18 +2065,13 @@ def getforecast():
         a,b,c,d,e,f,g = forecast(df.value, forecastperiod, forecasttimes)
         data1={}
 
-        forecast_value = str([a]).replace("array([","").replace("])","")
-        fit_value = str([d]).replace("array([","").replace("])","")
-
-        data1["forecast_value"] = forecast_value
-        data1["fit_value"] = fit_value
+        data1["forecast_value"] = a.tolist()
+        data1["fit_value"] = d.tolist()
         data1["accu"] = f
         data1["corr"] = g
-        jsondata = str(json.dumps(data1,ensure_ascii=False)).replace("\\n","")
-        print(jsondata)
+        jsondata = str(json.dumps(data1,ensure_ascii=False))
 
-
-        return "接收成功"
+        return jsondata
 
     except Exception as err:
         traceback.print_exc()
