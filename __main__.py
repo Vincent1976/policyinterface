@@ -2060,9 +2060,10 @@ def getforecast():
         actualvalue = postdata["actualvalue"]
         forecastperiod = postdata["forecastperiod"]
         forecasttimes = postdata["forecasttimes"]
+        print(postdata)
         # list 转为 dataframe
         df = pd.DataFrame(actualvalue,columns=['value'])
-        a,b,c,d,e,f,g = forecast(df.value, forecastperiod, forecasttimes)
+        a,b,c,d,e,f,g = forecast(df.value, forecasttimes, forecastperiod)
         data1={}
 
         data1["forecast_value"] = a.tolist()
@@ -2070,7 +2071,7 @@ def getforecast():
         data1["accu"] = f
         data1["corr"] = g
         jsondata = str(json.dumps(data1,ensure_ascii=False))
-
+        print(jsondata)
         return jsondata
 
     except Exception as err:
