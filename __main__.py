@@ -2060,10 +2060,9 @@ def getforecast():
         actualvalue = postdata["actualvalue"]
         forecastperiod = postdata["forecastperiod"]
         forecasttimes = postdata["forecasttimes"]
-        print(postdata)
         # list 转为 dataframe
         df = pd.DataFrame(actualvalue,columns=['value'])
-        a,b,c,d,e,f,g = forecast(df.value, forecasttimes, forecastperiod)
+        a,b,c,d,e,f,g = forecast(df.value, forecastperiod, forecasttimes)
         data1={}
 
         data1["forecast_value"] = a.tolist()
