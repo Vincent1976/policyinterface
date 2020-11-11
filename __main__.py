@@ -2341,7 +2341,7 @@ def getforecast():
         data1["accu"] = f
         data1["corr"] = g
         jsondata = str(json.dumps(data1,ensure_ascii=False))
-
+        print(jsondata)
         return jsondata
 
     except Exception as err:
