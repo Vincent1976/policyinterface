@@ -2285,21 +2285,21 @@ def wbpolicy():
         policymodel.save()
 
         # 投递保险公司 或 龙琨编号
-        # _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
-        # if _Flag == "1":
-        #     _Msg = "投保成功"
+        """_Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
+        if _Flag == "1":
+            _Msg = "投保成功"
         result = {}
-        result['responsecode'] = "ffff" 
-        result['responsemessage'] = "投保成功"
-        result['applicationserial'] = "eee"
+        result['responsecode'] = _Flag
+        result['responsemessage'] = _Msg
+        result['applicationserial'] = newguid
         result['appkey'] = policymodel.appkey
         result['sequencecode'] = policymodel.channelOrderId
         result['premium'] = policymodel.insuranceFee
-        result['policyno'] = "22222"
-        result['downloadurl'] = "222"
+        result['policyno'] = _InsurancePolicy
+        result['downloadurl'] = _PdfURL
         resultReturn = json.dumps(result)
-        return json.loads(resultReturn)
-        # return "投保成功"
+        return json.loads(resultReturn)"""
+        return "投保成功"
     
     except Exception as err:
         traceback.print_exc()
