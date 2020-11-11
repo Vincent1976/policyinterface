@@ -2057,6 +2057,7 @@ def wbpolicy():
     from models import GJXXPT_Product_model
     from dals import dal
     from models import ValidInsured_model
+    import time
     postdata = ""
     try:
         # 获取请求 
