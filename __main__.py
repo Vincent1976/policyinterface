@@ -2235,6 +2235,12 @@ def wbpolicy():
         product_rate = dataresult[0]['Rate'] #约定费率
         product_maxAmount = dataresult[0]['PolicyAmount'] #最高保额
 
+        # 产品编号校验
+        if policymodel.claimLimit == "LK040001":
+            policymodel.policyRate = "0.015%"
+        if policymodel.claimLimit == "LK040002":
+            policymodel.policyRate = "0.017%"
+
         if policymodel.termContent == "按约定":
             policymodel.termContent = product_deductible
         if policymodel.mpObject == "按约定":
@@ -2270,7 +2276,7 @@ def wbpolicy():
         if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
             # 保费=保额*费率
             _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
-            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))          
+            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))  
             if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
                 raise Exception("保费计算有误")
         else:
@@ -2313,8 +2319,6 @@ def wbpolicy():
         sendAlertMail('manman.zhang@dragonins.com','物泊—龙琨投递出错',str(err)+'<br />' + str(postdata))
         resultReturn = json.dumps(result)
         return json.loads(resultReturn)
-
-
 
 
 
