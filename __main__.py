@@ -1117,7 +1117,7 @@ def wbpolicy():
     postdata = json.loads(request.get_data(as_text=True))
     
     #写入日志
-    log_file = open('logs/' + newguid +'_wbpolicy.log',mode='a')
+    log_file = open('logs/' +'_wbpolicy.log',mode='a')
     log_file.write('---------------------------收到客户报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
     log_file.write(str(postdata) + '\n')
     log_file.close()
