@@ -1107,18 +1107,276 @@ def ssdpolicy():
 # 投保接口 (物泊)
 @app.route('/wbpolicy', methods=['POST'])
 def wbpolicy():
-    # from models import wb_ht_policy_model as policy_model
+    cust_sequencecode = ''
+    cust_appkey = ''
+    from models import wb_ht_policy_model as policy_model
     from models import GJXXPT_Product_model
     from dals import dal
     from models import ValidInsured_model
     postdata = ""
+    try:
+        # 获取请求 
+        postdata = json.loads(request.get_data(as_text=True))
+        policymodel = policy_model.wb_ht_remotedata()
+        
+        newguid = str(uuid.uuid1())
+        #写入日志
+        log_file = open('logs/' + newguid +'_wbpolicy.log',mode='a')
+        log_file.write('---------------------------收到客户报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(postdata) + '\n')
+        log_file.close()
+        # 保存客户运单
+        policymodel.guid = newguid        
+        # 头部信息
+        policymodel.appkey = postdata['appkey']     
+        cust_appkey = postdata['appkey']
+        policymodel.bizContent = postdata['usercode']
+        policymodel.channelOrderId = postdata['sequencecode']
+        cust_sequencecode = postdata['sequencecode']
+        policymodel.policyNo = postdata['solutionid']
+        policymodel.claimLimit = postdata['productid']       
 
-    # 获取请求 
-    postdata = json.loads(request.get_data(as_text=True))
+        action = postdata['action']  
+        policymodel.Status = '等待投保'
+        policymodel.CreateDate = datetime.datetime.now()
+        # 投保主体
+        policymodel.custCoName = postdata['applicantname']
+        policymodel.custProperty = postdata['applicanttype']
+        policymodel.custId = postdata['applicantidnumber']
+        policymodel.insuredName = postdata['insuredname']
+        policymodel.shipperProperty = postdata['insuredtype']        
+        policymodel.shipperId = postdata['insuredidnumber']
+        policymodel.shipperName = postdata['spname']
+
+        # 保险信息
+        policymodel.cargeValue = postdata['policyamount']
+        policymodel.policyRate = postdata['rate']
+        policymodel.termContent = postdata['deductible']
+        policymodel.insuranceFee = postdata['premium']
+        policymodel.mpObject = postdata['insurancecoveragename']
+        policymodel.mpRelation = postdata['chargetypecode']
+        policymodel.departDateTime = postdata['insuredatetime']
+        policymodel.shipId = postdata['originaldocumentnumber']
+        policymodel.trafficType = postdata['transportmodecode']
+        policymodel.licenseId = postdata['vehiclenumber']
+        policymodel.departProvince = postdata['startprovince']
+        policymodel.departCity = postdata['startcity']
+        policymodel.departDistrict = postdata['startdistrict']
+        policymodel.destinationProvice = postdata['endprovince']
+        policymodel.destinationCity = postdata['endcity']
+        policymodel.destinationDistrict = postdata['enddistrict']
+        policymodel.departSpot = postdata['startaddress']
+        policymodel.deliveryAddress = postdata['endaddress']
+        policymodel.departStation = postdata['startareacode']
+        policymodel.arriveStation = postdata['endareacode']
+        policymodel.arriveProperty = postdata['transitaddress']
+        policymodel.cargoName = postdata['descriptionofgoods']
+        policymodel.cargoType = postdata['cargotype']
+        policymodel.packageType = postdata['packagetype']
+        policymodel.cargoCount = postdata['packagequantity']
+        policymodel.cargoKind = postdata['packageunit']
+        policymodel.cargoWeight = postdata['weight']
+        policymodel.mpAmount = postdata['weightunit']
+        policymodel.volume = postdata['volume']
+        policymodel.mpRate = postdata['volumeunit']
+
+        ValidInsured = ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==policymodel.appkey,ValidInsured_model.ValidInsured.ValidInsuredName==policymodel.custCoName).all()
+        ValidInsured = model_to_dict(ValidInsured)
+        if len(ValidInsured)==0 :
+            raise Exception('开票信息配置信息不存在，投保失败')
+        #必填项校验
+        exMessage = ''
+        
+        if policymodel.appkey == "":
+            exMessage += "appkey不能为空;"
+        if policymodel.bizContent == "":
+            exMessage += "usercode不能为空;"
+        if policymodel.channelOrderId == "":
+            exMessage += "sequencecode不能为空;"
+        if policymodel.claimLimit == "":
+            exMessage += "productid不能为空;"
+        if action == "":
+            exMessage += "action不能为空;"
+        if policymodel.custCoName == "":
+            exMessage += "applicantname不能为空;"  
+        if policymodel.custProperty == "":
+            exMessage += "applicanttype不能为空;"
+        if policymodel.custId == "":
+            exMessage += "applicantidnumber不能为空;"
+        if policymodel.insuredName == "":
+            exMessage += "insuredName不能为空;"
+        if policymodel.shipperProperty == "":
+            exMessage += "insuredtype不能为空;"
+        if policymodel.shipperId == "":
+            exMessage += "insuredidnumber不能为空;"
+        if policymodel.shipperName == "":
+            exMessage += "spname不能为空;"
+        if policymodel.cargeValue == "":
+            exMessage += "policyamount不能为空;"
+        if policymodel.policyRate == "":
+            exMessage += "rate不能为空;"
+        if policymodel.termContent == "":
+            exMessage += "deductible不能为空;"
+        if policymodel.insuranceFee == "":
+            exMessage += "premium不能为空;"
+        if policymodel.mpObject == "":
+            exMessage += "insurancecoveragename不能为空;"
+        if policymodel.mpRelation == "":
+            exMessage += "chargetypecode不能为空;"
+        if policymodel.departDateTime == "":
+            exMessage += "insuredatetime不能为空;"
+        else:        
+            if len(policymodel.departDateTime) != 14:
+                raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
+            else:                   
+                # 倒签单校验
+                departDateTimes = policymodel.departDateTime
+                policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
+                time = int(departDateTimes)+10000 # 加10000相当于一个小时
+                now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+                
+                if time - now < 100: # 100相当于小于1分钟
+                    exMessage += "当前不允许倒签单;"
+
+        if policymodel.departProvince == "":
+            exMessage += "startprovince不能为空;"
+        if policymodel.departCity == "":
+            exMessage += "startcity不能为空;"
+        if policymodel.departDistrict == "":
+            exMessage += "startdistrict不能为空;"
+        if policymodel.destinationProvice == "":
+            exMessage += "endprovince不能为空;"
+        if policymodel.destinationCity == "":
+            exMessage += "endcity不能为空;"
+        if policymodel.destinationDistrict == "":
+            exMessage += "enddistrict不能为空;"
+        if policymodel.departSpot == "":
+            exMessage += "startaddress不能为空;"
+        if policymodel.deliveryAddress == "":
+            exMessage += "endaddress不能为空;"      
+        if policymodel.shipId == "" and policymodel.licenseId =="":
+            exMessage += "运单号或者车牌号至少一个必填;"
+        if policymodel.trafficType == "":
+            exMessage += "transportmodecode不能为空;"
+        if policymodel.cargoName == "":
+            exMessage += "descriptionofgoods不能为空;"
+        if policymodel.cargoType == "":
+            exMessage += "cargotype不能为空;"
+        if policymodel.cargoCount == "":
+            exMessage += "packagequantity不能为空;"
+        if exMessage !="":
+            raise Exception(exMessage)
+
+        #单据唯一性
+        remotedata = policy_model.wb_ht_remotedata.query.filter(policy_model.wb_ht_remotedata.appkey==postdata['appkey'], policy_model.wb_ht_remotedata.Status=='投保成功', policy_model.wb_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.wb_ht_remotedata.CreateDate.desc()).all()
+        result = []
+        dataresult = model_to_dict(remotedata)
+        if postdata['action'] == "apply":
+            if len(dataresult) > 0:   
+                raise Exception("sequencecode已存在重复,请不要重复投递")
+
+
+        # 产品信息校验
+        productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == postdata['appkey'],
+        GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == postdata['productid'])
+        dataresult = model_to_dict(productdata)
+        if len(dataresult) !=1:
+            raise Exception("产品未配置!")
+        product_deductible = dataresult[0]['deductible']
+        product_insurancecoveragename = dataresult[0]['InsuranceCoverageName']
+        product_transportcode = dataresult[0]['TransportModeCode']
+        product_chargetypecode = dataresult[0]['ChargeTypeCode']
+        product_cargotype = dataresult[0]['CargoTypeClassification1']
+        product_lowestpremium = dataresult[0]['MonetaryAmount']#最低保费
+        product_rate = dataresult[0]['Rate'] #约定费率
+        product_maxAmount = dataresult[0]['PolicyAmount'] #最高保额
+
+        # 产品编号校验
+        if policymodel.claimLimit == "LK040001":
+            policymodel.policyRate = "0.015%"
+        if policymodel.claimLimit == "LK040002":
+            policymodel.policyRate = "0.017%"
+
+        if policymodel.termContent == "按约定":
+            policymodel.termContent = product_deductible
+        if policymodel.mpObject == "按约定":
+            policymodel.mpObject = product_insurancecoveragename
+        if policymodel.trafficType == "按约定":
+            policymodel.trafficType = product_transportcode
+        if policymodel.mpRelation == "按约定":
+            policymodel.mpRelation = product_chargetypecode
+        if policymodel.policyRate == "按约定":
+            policymodel.policyRate = product_rate
+        if policymodel.cargoType == "按约定":
+            policymodel.cargoType = product_cargotype
+
+        if policymodel.termContent != product_deductible:
+            raise Exception("免赔额与产品定义不符")
+        if policymodel.mpObject != product_insurancecoveragename:
+            raise Exception("险别名称与产品定义不符")
+        if policymodel.trafficType != product_transportcode:
+            raise Exception("运输方式编码与产品定义不符")
+        if policymodel.mpRelation != product_chargetypecode:
+            raise Exception("计费方式与产品定义不符")        
+        if policymodel.cargoType != product_cargotype:
+            raise Exception("货物类型编码与产品定义不符")
+
+        # 保费校验 如果触发最低保费，则不校验费率，否则需校验
+
+        if product_maxAmount != "" and float(product_maxAmount) != 0.00:
+            # 触发最高保额          
+            m3 = decimal.Decimal(str(decimal.Decimal(policymodel.cargeValue))) - decimal.Decimal(str(decimal.Decimal(product_maxAmount)))
+            if m3 > 0 :
+                raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
+            # 如果触发最低保费，则不校验费率，否则需校验
+        if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
+            # 保费=保额*费率
+            _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
+            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))  
+            if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
+                raise Exception("保费计算有误")
+        else:
+            raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
+
+        policymodel.save()
+
+        # 投递保险公司 或 龙琨编号
+        """_Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_HT(newguid)       
+        if _Flag == "1":
+            _Msg = "投保成功"
+        result = {}
+        result['responsecode'] = _Flag
+        result['responsemessage'] = _Msg
+        result['applicationserial'] = newguid
+        result['appkey'] = policymodel.appkey
+        result['sequencecode'] = policymodel.channelOrderId
+        result['premium'] = policymodel.insuranceFee
+        result['policyno'] = _InsurancePolicy
+        result['downloadurl'] = _PdfURL
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)"""
+        return "投保成功"
     
-    #写入日志
-   
-    return "收到客户文件"
+    except Exception as err:
+        traceback.print_exc()
+        result = {}
+        result['responsecode'] = '0'
+        result['responsemessage'] = str(err)
+        result['applicationserial'] = ''
+        result['appkey'] = cust_appkey
+        result['sequencecode'] = cust_sequencecode
+        result['premium'] = ''
+        result['policyno'] = ''
+        result['downloadurl'] = ''
+        log_file = open('logs/' + newguid +'_wbpolicy.log',mode='a')
+        log_file.write('---------------------------物泊报错信息 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(err))
+        log_file.close()
+        sendAlertMail('manman.zhang@dragonins.com','物泊—龙琨投递出错',str(err)+'<br />' + str(postdata))
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)
+
+
 
 
 
