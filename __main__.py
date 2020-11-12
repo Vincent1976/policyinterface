@@ -1107,17 +1107,9 @@ def ssdpolicy():
 # 投保接口 (物泊)
 @app.route('/wbpolicy', methods=['POST'])
 def wbpolicy():
-    from models import wb_ht_policy_model as policy_model
-    from models import GJXXPT_Product_model
-    from dals import dal
-    from models import ValidInsured_model
-    postdata = ""
-
     # 获取请求 
-    postdata = json.loads(request.get_data(as_text=True))
-    
+    postdata = json.loads(request.get_data(as_text=True)) 
     #写入日志
-   
     return postdata
 
 
