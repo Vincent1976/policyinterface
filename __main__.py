@@ -420,8 +420,10 @@ def jmpolicy():
         policymodel.destinationProvice = postdata['endprovince']
         policymodel.destinationCity = postdata['endcity']
         policymodel.destinationDistrict = postdata['enddistrict']
-        policymodel.departSpot = postdata['startaddress']
-        policymodel.deliveryAddress = postdata['endaddress']
+        startaddress = str(postdata['startaddress']).replace("-","_").replace("<","《").replace(">","》")       
+        policymodel.departSpot = startaddress
+        endaddress = str(postdata['endaddress']).replace("-","_").replace("<","《").replace(">","》")
+        policymodel.deliveryAddress = endaddress
         policymodel.departStation = postdata['startareacode']
         policymodel.arriveStation = postdata['endareacode']
         policymodel.arriveProperty = postdata['transitaddress']
