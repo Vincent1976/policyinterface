@@ -2032,7 +2032,7 @@ def postInsurer_HT(guid):
         _PdfURL = ""
         _Status = ""
         
-        _Flag = resultNode.getElementsByTagName("Flag")[0].childNodes[0].data
+        _Flag = resultNode.getElementsByTagName("Flag")[0].childNodes[0].data      
         if _Flag == "2": # 人工核保
             _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
             _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
@@ -2046,6 +2046,7 @@ def postInsurer_HT(guid):
             if productNo == "LK999999":
                 _Status = '测试数据'
         else: # 投保失败
+            sendAlertMail('manman.zhang@dragonins.com','聚盟—华泰投递出错',str(resultNode.getElementsByTagName("Msg")[0].childNodes[0].data)+'<br />' + str(remotedata[0]['guid']))
             _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
             _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
             _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
