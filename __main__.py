@@ -2329,6 +2329,582 @@ def hspolicy():
         return json.loads(resultReturn)
 
 
+
+
+# 投递保险公司(云链智运华泰)
+def postInsurer_ylzy_HT(guid):
+    from models import RBProductInfo_model
+    from models import InsurerSpec_model
+    from models import ValidInsured_model
+    from models import ylzy_ht_policy_model as policy_model
+    from models import GJXXPT_Product_model
+    from dals import dal
+    try:
+        #region 读取等待投保数据
+        remotedata = policy_model.ylzy_ht_remotedata.query.filter(policy_model.ylzy_ht_remotedata.guid==guid).all()
+        remotedata = model_to_dict(remotedata)
+        appkey = remotedata[0]['appkey']
+        productNo = remotedata[0]['claimLimit']
+        custCoName = remotedata[0]['custCoName'] 
+        ######公共信息General
+        issueTime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "T") #出单时间
+        insurancePolicy = "" #保单号
+        serialNumber=guid.replace("-","") #流水号
+        #产品校验
+        GJXXPTProduct=GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey==appkey, GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode==productNo).all()
+        GJXXPTProduct = model_to_dict(GJXXPTProduct)
+
+        if len(GJXXPTProduct)==0 :
+            raise Exception('产品配置信息不存在，投保失败')
+        RBProductInfo=RBProductInfo_model.RBProductInfo.query.filter(RBProductInfo_model.RBProductInfo.line_no==GJXXPTProduct[0]['numCode']).all()
+        RBProductInfo = model_to_dict(RBProductInfo)
+        if len(RBProductInfo)==0 :
+            raise Exception('分产品配置信息不存在，投保失败')
+        #产品校验
+        insuranceCode=RBProductInfo[0]['MainGlausesCode'] #险种代码
+        insuranceName=RBProductInfo[0]['MainGlauses'] #险种名称
+        effectivTime=datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") #保险起期
+        terminalTime=(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")+datetime.timedelta(days=30)).strftime("%Y-%m-%d") #保险止期
+        copy="1" #份数
+        signTM=datetime.datetime.now().strftime("%Y-%m-%d") #签单时间
+
+        ######运输信息Freight
+        sign="无" #货物标记 (默认国内传递空或者无) 
+        packAndQuantity=remotedata[0]['packageType']+remotedata[0]['cargoWeight']+remotedata[0]['mpAmount'] #包装及数量
+        fregihtItem=remotedata[0]['cargoName'] #货物项目
+        invoiceNumber="" #发票号
+        #billNumber="详见运单" #提单号
+        billNumber = "订单号 "+remotedata[0]['shipId']
+        freightType=GJXXPTProduct[0]['CargoTypeClassification1'] #货物类型（编码）
+        freightDetail=GJXXPTProduct[0]['BXcargoCode'] #二级货物类型明细（编码）
+        invoiceMoney=remotedata[0]['cargeValue'] #发票金额
+        invoiceBonus="1" #加成 (国内默认1)
+        amt=decimal.Decimal(invoiceMoney)*decimal.Decimal(invoiceBonus) #保险金额
+        amtCurrency="01" #保险金额币种（编码）(国内默认人民币01)
+        exchangeRate="1" #汇率 (国内默认1)
+        rate=decimal.Decimal(GJXXPTProduct[0]['Rate'].split('%',1)[0])/100
+        rate2=0
+        if remotedata[0]['policyRate']!="":
+            rate2=decimal.Decimal(remotedata[0]['policyRate'].split('%',1)[0])/100
+        chargeRate=rate*1000
+        if remotedata[0]['policyRate']== "":
+            chargeRate=rate2*1000 #费率‰ 
+        premium=remotedata[0]['insuranceFee'] #保险费
+        premiumCurrency="01" #保险费币种（编码）(国内默认人民币01)
+        premiumPrit=RBProductInfo[0]['AdditiveNo'] #保费打印
+        transportType=GJXXPTProduct[0]['TransportModeCode'] #运输方式（编码）
+        transportDetail=GJXXPTProduct[0]['BXcargoName'] #二级运输方式明细（编码）
+        if remotedata[0]['licenseId']=="":
+            trafficNumber = "订单号 "+ remotedata[0]['shipId']
+        else:
+            trafficNumber = "车牌号 "+ remotedata[0]['licenseId']
+        flightsCheduled="" #航次
+        buildYear="" #建造年份
+        fromCountry="HTC01" #起运地国家（编码）
+
+        ######起运地国家（编码）/起运地
+        fromArea=remotedata[0]['departProvince']+remotedata[0]['departCity']+remotedata[0]['departDistrict'] + remotedata[0]['departSpot'] #起运地 
+        passPort="" #途径港S
+        toContry="HTC01" #目的地国家 （编码）
+
+        ######目的地国家（编码）/目的地
+        toArea=remotedata[0]['destinationProvice']+remotedata[0]['destinationCity']+remotedata[0]['destinationDistrict']+remotedata[0]['deliveryAddress'] #目的地  
+        surveyAdrID=RBProductInfo[0]['Additive'] #查勘地址编码
+        surveyAdr="" #查勘地址内容 
+        trantsTool="" #转运工具
+        startTM=str(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")).replace(" ", "T")
+        endTM=str(datetime.datetime.strptime(remotedata[0]['departDateTime'], "%Y-%m-%d %H:%M:%S")+datetime.timedelta(days=30)).replace(" ", "T")
+        originalSum="1" #正文份数 
+        datePritType="1" #日期打印方式(编码）(国内为中文1)
+        InsurerSpec=InsurerSpec_model.InsurerSpec.query.filter(InsurerSpec_model.InsurerSpec.numCode==RBProductInfo[0]['SpecialAnnounce']).all()
+        InsurerSpec = model_to_dict(InsurerSpec)
+        if len(InsurerSpec)==0 :
+            raise Exception('特别约定配置信息不存在，投保失败')
+        mark="" #特别约定 
+        creditNO="" #信用证编码
+        creditNODesc="" #信用证描述
+        trailerNum="" #挂车车牌号
+        payAddr="" #赔款偿付地
+
+        ######险种信息InsureRdr，获取
+        rdrCde=GJXXPTProduct[0]['InsuranceCode'] #编码 (国内)
+        rdrName=GJXXPTProduct[0]['InsuranceCoverageName'] #名称 (国内)
+        rdrDesc=GJXXPTProduct[0]['Remark'] #描述
+
+        # 附加盗抢险，不进行配置，写死在程序里
+        rdrCde1="SX400069" #编码 (国内)
+        rdrName1="盗抢险条款" #名称 (国内)
+        rdrDesc1="盗抢险条款" #描述
+
+        ######投保人信息Applicant
+        appCode="" #投保人编码
+        applicantName=remotedata[0]['custCoName'] #投保人名称
+        gender="" #投保人性别
+        birthday="" #投保人生日
+        IDType="99" #证件类别（传固定值99开票传97） 
+        ID="" #证件号码 
+        phone="" #固定电话 
+        cell="" #联系手机
+        zip="" #邮政编码
+        address="" #地址 
+        email="" #Email
+        taxDeduct="1" #是否要增值税发票 
+        accountBank="" #开户银行 
+        accountNumber="" #银行账号
+        if taxDeduct=="1":
+            ValidInsured=ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==appkey,ValidInsured_model.ValidInsured.ValidInsuredName==custCoName).all()
+            ValidInsured = model_to_dict(ValidInsured)
+            if len(ValidInsured)==0 :
+                raise Exception('开票信息配置信息不存在，投保失败')
+            accountBank=ValidInsured[0]['CertfCls']
+            accountNumber=ValidInsured[0]['ClntMrk']
+            IDType="97"
+            ID=ValidInsured[0]['CertfCde']
+            phone=ValidInsured[0]['Tel']
+            address=ValidInsured[0]['DetailAddress']
+
+        #####被保险人信息Insured
+        insuredName=remotedata[0]['insuredName'] #被保险人名称
+        insuredGender="" #被保险人性别
+        insuredBirthday="" #被保险人生日
+        insuredIDType="99" #证件类别
+        insuredID="不详" #证件号码 
+        insuredPhone="" #固定电话
+        insuredCell="" #联系手机
+        insuredZip="" #邮政编码
+        insuredAddress="" #地址
+        insuredEmail="" #Email
+        #endregion
+
+        usr = "U030000328"  
+        pwd = "fffe578ef8bba01e80dae7e17457cade"
+        url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl" # 测试地址
+        key = "1qaz2wsx" # 测试key
+        # 通过产品号区分投递环境 
+        if productNo=="LK999999":
+            url="http://202.108.103.154:8080/HT_interfacePlatform/webservice/ImportService?wsdl"
+            key = "1qaz2wsx" # 测试key
+        elif productNo=="LK046001":
+            url = "http://219.141.242.74:9081/HT_interfacePlatform/webservice/ImportService?wsdl" # 生产地址
+            key = "2wsx1qaz" # 生产key
+        else:
+            raise Exception("产品编号【"+productNo+"】尚未开通投保")
+
+        if url == "":
+            raise Exception("投保系统尚未开通")
+
+        client=Client(url)#Client里面直接放访问的URL，可以生成一个webservice对象
+        postXML = """<?xml version='1.0' encoding='utf-8'?>
+                        <Policy>
+                            <General>
+                                <IssueTime>"""+str(issueTime)+"""</IssueTime>
+                                <SerialNumber>"""+str(serialNumber)+"""</SerialNumber>
+                                <InsurancePolicy>"""+str(insurancePolicy)+"""</InsurancePolicy>
+                                <InsuranceCode>"""+str(insuranceCode)+"""</InsuranceCode>
+                                <InsuranceName>"""+str(insuranceName)+"""</InsuranceName>
+                                <EffectivTime>"""+str(effectivTime)+"""</EffectivTime>
+                                <TerminalTime>"""+str(terminalTime)+"""</TerminalTime>
+                                <Copy>"""+str(copy)+"""</Copy>
+                                <SignTM>"""+str(signTM)+"""</SignTM>
+                            </General>
+                            <Freight>
+                                <Sign>"""+str(sign)+"""</Sign>
+                                <PackAndQuantity>"""+str(packAndQuantity)+"""</PackAndQuantity>
+                                <FregihtItem>"""+str(fregihtItem)+"""</FregihtItem>
+                                <InvoiceNumber>"""+str(invoiceNumber)+"""</InvoiceNumber>
+                                <BillNumber>"""+str(billNumber)+"""</BillNumber>
+                                <FreightType>"""+str(freightType)+"""</FreightType>
+                                <FreightDetail>"""+str(freightDetail)+"""</FreightDetail>
+                                <InvoiceMoney>"""+str(invoiceMoney)+"""</InvoiceMoney>
+                                <InvoiceBonus>"""+str(invoiceBonus)+"""</InvoiceBonus>
+                                <Amt>"""+str(amt)+"""</Amt>
+                                <AmtCurrency>"""+str(amtCurrency)+"""</AmtCurrency>
+                                <ExchangeRate>"""+str(exchangeRate)+"""</ExchangeRate>
+                                <ChargeRate>"""+str(chargeRate)+"""</ChargeRate>
+                                <Premium>"""+str(premium)+"""</Premium>
+                                <PremiumCurrency>"""+str(premiumCurrency)+"""</PremiumCurrency>
+                                <PremiumPrit>"""+str(premiumPrit)+"""</PremiumPrit>
+                                <TransportType>"""+str(transportType)+"""</TransportType>
+                                <TransportDetail>"""+str(transportDetail)+"""</TransportDetail>
+                                <TrafficNumber>"""+str(trafficNumber)+"""</TrafficNumber>
+                                <FlightsCheduled>"""+str(flightsCheduled)+"""</FlightsCheduled>
+                                <BuildYear>"""+str(buildYear)+"""</BuildYear>
+                                <FromCountry>"""+str(fromCountry)+"""</FromCountry>
+                                <FromArea>"""+str(fromArea)+"""</FromArea>
+                                <PassPort>"""+str(passPort)+"""</PassPort>
+                                <ToContry>"""+str(toContry)+"""</ToContry>
+                                <ToArea>"""+str(toArea)+"""</ToArea>
+                                <SurveyAdrID>"""+str(surveyAdrID)+"""</SurveyAdrID>
+                                <SurveyAdr>"""+str(surveyAdr)+"""</SurveyAdr>
+                                <TrantsTool>"""+str(trantsTool)+"""</TrantsTool>
+                                <StartTM>"""+str(startTM)+"""</StartTM>
+                                <EndTM>"""+str(endTM)+"""</EndTM>
+                                <OriginalSum>"""+str(originalSum)+"""</OriginalSum>
+                                <DatePritType>"""+str(datePritType)+"""</DatePritType>
+                                <Mark>"""+str(mark)+"""</Mark>
+                                <CreditNO>"""+str(creditNO)+"""</CreditNO>
+                                <CreditNODesc>"""+str(creditNODesc)+"""</CreditNODesc>
+                                <TrailerNum>"""+str(trailerNum)+"""</TrailerNum>
+                                <PayAddr>"""+str(payAddr)+"""</PayAddr>
+                            </Freight>
+                            <InsureRdrs>
+                                <InsureRdr>
+                                    <RdrCde>"""+str(rdrCde)+"""</RdrCde>
+                                    <RdrName>"""+str(rdrName)+"""</RdrName>
+                                    <RdrDesc>"""+str(rdrDesc)+"""</RdrDesc>
+                                </InsureRdr>
+                                <InsureRdr>
+                                    <RdrCde>"""+str(rdrCde1)+"""</RdrCde>
+                                    <RdrName>"""+str(rdrName1)+"""</RdrName>
+                                    <RdrDesc>"""+str(rdrDesc1)+"""</RdrDesc>
+                                </InsureRdr>
+                            </InsureRdrs>
+                            <Applicant>
+                                <AppCode>"""+str(appCode)+"""</AppCode>
+                                <ApplicantName>"""+str(applicantName)+"""</ApplicantName>
+                                <Gender>"""+str(gender)+"""</Gender>
+                                <Birthday>"""+str(birthday)+"""</Birthday>
+                                <IDType>"""+str(IDType)+"""</IDType>
+                                <ID>"""+str(ID)+"""</ID>
+                                <Phone>"""+str(phone)+"""</Phone>
+                                <Cell>"""+str(cell)+"""</Cell>
+                                <Zip>"""+str(zip)+"""</Zip>
+                                <Address>"""+str(address)+"""</Address>
+                                <Email>"""+str(email)+"""</Email>
+                                <TaxDeduct>"""+str(taxDeduct)+"""</TaxDeduct>
+                                <AccountBank>"""+str(accountBank)+"""</AccountBank>
+                                <AccountNumber>"""+str(accountNumber)+"""</AccountNumber>
+                            </Applicant>
+                            <Insured>
+                                <InsuredName>"""+str(insuredName)+"""</InsuredName>
+                                <Gender>"""+str(insuredGender)+"""</Gender>
+                                <Birthday>"""+str(insuredBirthday)+"""</Birthday>
+                                <IDType>"""+str(insuredIDType)+"""</IDType>
+                                <ID>"""+str(insuredID)+"""</ID>
+                                <Phone>"""+str(insuredPhone)+"""</Phone>
+                                <Cell>"""+str(insuredCell)+"""</Cell>
+                                <Zip>"""+str(insuredZip)+"""</Zip>
+                                <Address>"""+str(insuredAddress)+"""</Address>
+                                <Email>"""+str(insuredEmail)+"""</Email>
+                            </Insured>
+                        </Policy>"""
+
+        m = hashlib.md5()
+        b = (key + postXML).encode(encoding='utf-8')
+        m.update(b)
+        signmd5 = m.hexdigest()
+        result = client.service.IMPPolicy(postXML, usr, pwd, signmd5.upper())
+
+        #写入日志
+        log_file = open('logs/' + guid +'_ylzypolicy.log',mode='a')
+        log_file.write('---------------------------发给华泰报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write("usr:" + usr + '\n')
+        log_file.write("pwd:" + pwd + '\n')
+        log_file.write("key:" + key + '\n')
+        log_file.write("url:" + url + '\n')
+        log_file.write(postXML + '\n')
+        log_file.write('---------------------------对接华泰结果 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(result))
+        log_file.close()
+
+        from xml.dom.minidom import parse
+        import xml.dom.minidom
+        DOMTree = xml.dom.minidom.parseString(str(result))
+        resultNode = DOMTree.documentElement
+
+        _Msg = ""
+        _SerialNumber = ""
+        _InsurancePolicy = ""
+        _PdfURL = ""
+        _Status = ""
+        
+        _Flag = resultNode.getElementsByTagName("Flag")[0].childNodes[0].data 
+        if _Flag == "2": # 人工核保
+            _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
+            _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
+            _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
+            _Status = "人工核保"
+        elif _Flag == "1": # 核保通过
+            _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
+            _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
+            _PdfURL = resultNode.getElementsByTagName("PdfURL")[0].childNodes[0].data    
+            _Status = "投保成功"
+            if productNo == "LK999999":
+                _Status = '测试数据'
+        else: # 投保失败
+            sendAlertMail('manman.zhang@dragonins.com','云链智运—华泰投递出错',str(resultNode.getElementsByTagName("Msg")[0].childNodes[0].data)+'<br />' + str(remotedata[0]['guid']))
+            _Msg = resultNode.getElementsByTagName("Msg")[0].childNodes[0].data
+            _SerialNumber = resultNode.getElementsByTagName("SerialNumber")[0].childNodes[0].data
+            _InsurancePolicy = resultNode.getElementsByTagName("InsurancePolicy")[0].childNodes[0].data
+            _PdfURL = resultNode.getElementsByTagName("PdfURL")[0].childNodes[0].data
+            _Status = "投保失败"
+
+        # 回写投保表
+        sql = "UPDATE ylzy_ht_remotedata SET Status='%s', errLog='%s', policySolutionID='%s', relationType='%s' WHERE guid='%s'" %(_Status, _Msg, _InsurancePolicy, _PdfURL, guid)
+        dal.SQLHelper.update(sql,None)
+        return _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag
+    except Exception as err:
+        traceback.print_exc()
+        return "投保失败", "", "", str(err), "0"
+
+
+# 投保接口 (云链智运)
+@app.route('/ylzypolicy', methods=['POST'])
+def ylzypolicy():
+    cust_sequencecode = ''
+    cust_appkey = ''
+    from models import ylzy_ht_policy_model as policy_model
+    from models import GJXXPT_Product_model
+    from dals import dal
+    from models import ValidInsured_model
+    postdata = ""
+    try:
+        # 获取请求 
+        postdata = json.loads(request.get_data(as_text=True))
+        policymodel = policy_model.ylzy_ht_remotedata()
+        newguid = str(uuid.uuid1())
+        #写入日志
+        log_file = open('logs/' + newguid +'_ylzypolicy.log',mode='a')
+        log_file.write('---------------------------收到客户报文 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(postdata) + '\n')
+        log_file.close()
+        # 保存客户运单
+        policymodel.guid = newguid        
+        # 头部信息
+        policymodel.appkey = postdata['appkey']     
+        cust_appkey = postdata['appkey']
+        policymodel.bizContent = postdata['usercode']
+        policymodel.channelOrderId = postdata['sequencecode']
+        cust_sequencecode = postdata['sequencecode']
+        policymodel.policyNo = postdata['solutionid']
+        policymodel.claimLimit = postdata['productid']       
+
+        action = postdata['action']  
+        policymodel.Status = '等待投保'
+        policymodel.CreateDate = datetime.datetime.now()
+        # 投保主体
+        policymodel.custCoName = postdata['applicantname']
+        policymodel.custProperty = postdata['applicanttype']
+        policymodel.custId = postdata['applicantidnumber']
+        policymodel.insuredName = postdata['insuredname']
+        policymodel.shipperProperty = postdata['insuredtype']        
+        policymodel.shipperId = postdata['insuredidnumber']
+        policymodel.shipperContact = postdata['spname']
+        # 保险信息
+        policymodel.cargeValue = postdata['policyamount']
+        policymodel.policyRate = postdata['rate']
+        policymodel.termContent = postdata['deductible']
+        policymodel.insuranceFee = postdata['premium']
+        policymodel.mpObject = postdata['insurancecoveragename']
+        policymodel.mpRelation = postdata['chargetypecode']
+        policymodel.departDateTime = postdata['insuredatetime']
+        policymodel.shipId = postdata['originaldocumentnumber']
+        policymodel.trafficType = postdata['transportmodecode']
+        policymodel.licenseId = postdata['vehiclenumber']
+        policymodel.departProvince = postdata['startprovince']
+        policymodel.departCity = postdata['startcity']
+        policymodel.departDistrict = postdata['startdistrict']
+        policymodel.destinationProvice = postdata['endprovince']
+        policymodel.destinationCity = postdata['endcity']
+        policymodel.destinationDistrict = postdata['enddistrict']
+        startaddress = str(postdata['startaddress']).replace("-","_").replace("<","《").replace(">","》")       
+        policymodel.departSpot = startaddress
+        endaddress = str(postdata['endaddress']).replace("-","_").replace("<","《").replace(">","》")
+        policymodel.deliveryAddress = endaddress
+        policymodel.departStation = postdata['startareacode']
+        policymodel.arriveStation = postdata['endareacode']
+        policymodel.arriveProperty = postdata['transitaddress']
+        policymodel.cargoName = postdata['descriptionofgoods']
+        policymodel.cargoType = postdata['cargotype']
+        policymodel.packageType = postdata['packagetype']
+        policymodel.cargoCount = postdata['packagequantity']
+        policymodel.cargoKind = postdata['packageunit']
+        policymodel.cargoWeight = postdata['weight']
+        policymodel.mpAmount = postdata['weightunit']
+        policymodel.volume = postdata['volume']
+        policymodel.mpRate = postdata['volumeunit']
+        ValidInsured = ValidInsured_model.ValidInsured.query.filter(ValidInsured_model.ValidInsured.Appkey==policymodel.appkey,ValidInsured_model.ValidInsured.ValidInsuredName==policymodel.custCoName).all()
+        ValidInsured = model_to_dict(ValidInsured)
+        if len(ValidInsured)==0 :
+            raise Exception('开票信息配置信息不存在，投保失败')
+        #必填项校验
+        exMessage = ''
+        
+        if policymodel.appkey == "":
+            exMessage += "appkey不能为空;"
+        if policymodel.bizContent == "":
+            exMessage += "usercode不能为空;"
+        # if policymodel.policyNo == "":
+        #     exMessage += "solutionid不能为空;"
+        if policymodel.channelOrderId == "":
+            exMessage += "sequencecode不能为空;"
+        if policymodel.claimLimit == "":
+            exMessage += "productid不能为空;"
+        # if action == "":
+        #     exMessage += "action不能为空;"
+        if policymodel.custCoName == "":
+            exMessage += "applicantname不能为空;"                        
+        if policymodel.custProperty == "":
+            exMessage += "applicanttype不能为空;"
+        if policymodel.custId == "":
+            exMessage += "applicantidnumber不能为空;"
+        if policymodel.insuredName == "":
+            exMessage += "insuredName不能为空;"
+        if policymodel.shipperProperty == "":
+            exMessage += "insuredtype不能为空;"
+        # if policymodel.shipperId == "":
+        #     exMessage += "insuredidnumber不能为空;"
+        if policymodel.cargeValue == "":
+            exMessage += "policyamount不能为空;"
+        if policymodel.policyRate == "":
+            exMessage += "rate不能为空;"
+        if policymodel.termContent == "":
+            exMessage += "deductible不能为空;"
+        if policymodel.insuranceFee == "":
+            exMessage += "premium不能为空;"
+        if policymodel.mpObject == "":
+            exMessage += "insurancecoveragename不能为空;"
+        if policymodel.mpRelation == "":
+            exMessage += "chargetypecode不能为空;"
+        if policymodel.departDateTime == "":
+            exMessage += "insuredatetime不能为空;"
+        else:        
+            if len(policymodel.departDateTime) != 14:
+                raise Exception("错误：起运日期departDateTime格式有误，正确格式：20170526153733;")
+            else:                   
+                # 倒签单校验
+                departDateTimes = policymodel.departDateTime
+                policymodel.departDateTime = str(departDateTimes[0:4]) + "-" + str(departDateTimes[4:6]) + "-" + str(departDateTimes[6:8]) + " "+ str(departDateTimes[8:10]) + ":" + str(departDateTimes[10:12])+ ":" + str(departDateTimes[12:14])
+                time = int(departDateTimes)+10000 # 加10000相当于一个小时
+                now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+                
+                if time - now < 100: # 100相当于小于1分钟
+                    exMessage += "当前不允许倒签单;"
+                
+        if policymodel.shipId == "" and policymodel.licenseId =="":
+            exMessage += "运单号或者车牌号至少一个必填;"
+        if policymodel.trafficType == "":
+            exMessage += "transportmodecode不能为空;"
+        # if policymodel.departSpot == "":
+        #     exMessage += "startaddress不能为空;"
+        # if policymodel.deliveryAddress == "":
+        #     exMessage += "endaddress不能为空;"
+        if policymodel.cargoName == "":
+            exMessage += "descriptionofgoods不能为空;"
+        if policymodel.cargoType == "":
+            exMessage += "cargotype不能为空;"
+        if policymodel.cargoCount == "":
+            exMessage += "packagequantity不能为空;"
+        if exMessage !="":
+            raise Exception(exMessage)
+
+        #单据唯一性
+        remotedata = policy_model.ylzy_ht_remotedata.query.filter(policy_model.ylzy_ht_remotedata.appkey==postdata['appkey'], policy_model.ylzy_ht_remotedata.Status=='投保成功', policy_model.ylzy_ht_remotedata.channelOrderId==postdata['sequencecode']).order_by(policy_model.ylzy_ht_remotedata.CreateDate.desc()).all()
+        print(remotedata)
+        result = []
+        dataresult = model_to_dict(remotedata)
+        if postdata['action'] == "apply":
+            if len(dataresult) > 0:   
+                raise Exception("sequencecode已存在重复,请不要重复投递")
+
+
+        # 产品信息校验
+        productdata = GJXXPT_Product_model.GJXXPTProduct.query.filter(GJXXPT_Product_model.GJXXPTProduct.appkey == postdata['appkey'],
+        GJXXPT_Product_model.GJXXPTProduct.InsuranceCoverageCode == postdata['productid'])
+        dataresult = model_to_dict(productdata)
+        if len(dataresult) !=1:
+            raise Exception("产品未配置!")
+        product_deductible = dataresult[0]['deductible']
+        product_insurancecoveragename = dataresult[0]['InsuranceCoverageName']
+        product_transportcode = dataresult[0]['TransportModeCode']
+        product_chargetypecode = dataresult[0]['ChargeTypeCode']
+        product_cargotype = dataresult[0]['CargoTypeClassification1']
+        product_lowestpremium = dataresult[0]['MonetaryAmount']#最低保费
+        product_rate = dataresult[0]['Rate'] #约定费率
+        product_maxAmount = dataresult[0]['PolicyAmount'] #最高保额
+
+        if policymodel.termContent == "按约定":
+            policymodel.termContent = product_deductible
+        if policymodel.mpObject == "按约定":
+            policymodel.mpObject = product_insurancecoveragename
+        if policymodel.trafficType == "按约定":
+            policymodel.trafficType = product_transportcode
+        if policymodel.mpRelation == "按约定":
+            policymodel.mpRelation = product_chargetypecode
+        if policymodel.policyRate == "按约定":
+            policymodel.policyRate = product_rate
+        if policymodel.cargoType == "按约定":
+            policymodel.cargoType = product_cargotype
+
+        if policymodel.termContent != product_deductible:
+            raise Exception("免赔额与产品定义不符")
+        if policymodel.mpObject != product_insurancecoveragename:
+            raise Exception("险别名称与产品定义不符")
+        if policymodel.trafficType != product_transportcode:
+            raise Exception("运输方式编码与产品定义不符")
+        if policymodel.mpRelation != product_chargetypecode:
+            raise Exception("计费方式与产品定义不符")        
+        if policymodel.cargoType != product_cargotype:
+            raise Exception("货物类型编码与产品定义不符")
+
+        # 保费校验 如果触发最低保费，则不校验费率，否则需校验
+
+        if product_maxAmount != "" and float(product_maxAmount) != 0.00:
+            # 触发最高保额          
+            m3 = decimal.Decimal(str(decimal.Decimal(policymodel.cargeValue))) - decimal.Decimal(str(decimal.Decimal(product_maxAmount)))
+            if m3 > 0 :
+                raise Exception("超过与保险公司约定的最高保额",product_maxAmount)
+            # 如果触发最低保费，则不校验费率，否则需校验
+        if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) >= decimal.Decimal(str(decimal.Decimal(product_lowestpremium))):
+            # 保费=保额*费率
+            _rate=decimal.Decimal(product_rate.split('%',1)[0])/100
+            _premium = decimal.Decimal((decimal.Decimal(policymodel.cargeValue) * _rate))
+
+            if decimal.Decimal(str(decimal.Decimal(policymodel.insuranceFee))) !=_premium:
+                raise Exception("保费计算有误")
+        else:
+            raise Exception("保费不能低于合同约定的最低保费")#触发最低保费
+
+        
+        policymodel.save()
+
+        # 投递保险公司 或 龙琨编号
+        _Status, _InsurancePolicy, _PdfURL, _Msg, _Flag = postInsurer_ylzy_HT(newguid)       
+        if _Flag == "1":
+            _Msg = "投保成功"
+        result = {}
+        result['responsecode'] = _Flag
+        result['responsemessage'] = _Msg
+        result['applicationserial'] = newguid
+        result['appkey'] = policymodel.appkey
+        result['sequencecode'] = policymodel.channelOrderId
+        result['premium'] = policymodel.insuranceFee
+        result['policyno'] = _InsurancePolicy
+        result['downloadurl'] = _PdfURL
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)
+    
+    except Exception as err:
+        traceback.print_exc()
+        result = {}
+        result['responsecode'] = '0'
+        result['responsemessage'] = str(err)
+        result['applicationserial'] = ''
+        result['appkey'] = cust_appkey
+        result['sequencecode'] = cust_sequencecode
+        result['premium'] = ''
+        result['policyno'] = ''
+        result['downloadurl'] = ''
+        log_file = open('logs/' + newguid +'_ylzypolicy.log',mode='a')
+        log_file.write('---------------------------云链智运报错信息 ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '---------------------------\n')
+        log_file.write(str(err))
+        log_file.close()
+        sendAlertMail('manman.zhang@dragonins.com','云链智运—华泰投递出错',str(err)+'<br />' + str(postdata))
+        resultReturn = json.dumps(result)
+        return json.loads(resultReturn)
+
+
+
 # (孙博士)
 @app.route('/getforecast', methods=['POST'])
 def getforecast(): 
