@@ -492,8 +492,8 @@ def jmpolicy():
                 time = int(departDateTimes)+10000 # 加10000相当于一个小时
                 now = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
                 
-                if time - now < 100: # 100相当于小于1分钟
-                    exMessage += "当前不允许倒签单;"
+                # if time - now < 100: # 100相当于小于1分钟
+                #     exMessage += "当前不允许倒签单;"
                 
         if policymodel.shipId == "" and policymodel.licenseId =="":
             exMessage += "运单号或者车牌号至少一个必填;"
